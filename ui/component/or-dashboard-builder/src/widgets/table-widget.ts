@@ -82,7 +82,7 @@ export class TableWidget extends OrAssetWidget {
     /* --------------------------------------- */
 
     protected loadAssets() {
-        if(this.widgetConfig.assetAnyOfType = true) {
+        if(this.widgetConfig.assetAnyOfType) {
             this.queryAssets({
                 types: [this.widgetConfig.assetType],
                 select: {

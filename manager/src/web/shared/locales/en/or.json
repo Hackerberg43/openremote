@@ -6,7 +6,7 @@
   "rules": "Rules",
   "asset": "Asset",
   "asset_plural": "Assets",
-  "assets": "Assets",
+  "allAssetsofType": "All assets of this type",
   "attribute": "Attribute",
   "attributes": "Attributes",
   "attribute_plural": "Attributes",

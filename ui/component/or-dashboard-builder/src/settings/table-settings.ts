@@ -23,10 +23,10 @@ export class TableSettings extends AssetWidgetSettings {
     }
 
     protected render(): TemplateResult {
-        const config = {
+        let config = {
             assets: {
-                enabled: true,
-                multi: true
+                enabled: !this.widgetConfig.assetAnyOfType,
+                multi: !this.widgetConfig.assetAnyOfType
             },
             attributes: {
                 enabled: true,
@@ -44,6 +44,13 @@ export class TableSettings extends AssetWidgetSettings {
                                           @assetids-select="${(ev: AssetIdsSelectEvent) => this.onAssetIdsSelect(ev)}"
                                           @attributenames-select="${(ev: AttributeNamesSelectEvent) => this.onAttributesSelect(ev)}"
                         ></assettypes-panel>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><or-translate value="allAssetsofType"></or-translate></span>
+                        <or-mwc-input .type="${InputType.SWITCH}" style="width: 70px;"
+                                      .value="${this.widgetConfig.assetAnyOfType}"
+                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onAssetAnyOfTypeToggle(ev)}"
+                        ></or-mwc-input>
                     </div>
                 </settings-panel>
                 
