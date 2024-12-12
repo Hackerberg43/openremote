@@ -16,13 +16,15 @@ export interface TableWidgetConfig extends WidgetConfig {
     assetIds: string[]
     attributeNames: string[],
     tableSize: number,
-    tableOptions: number[]
+    tableOptions: number[],
+    assetAnyOfType: boolean
 }
 
 function getDefaultConfig(): TableWidgetConfig {
     return {
         assetType: undefined,
         assetIds: [],
+        assetAnyOfType: false,
         attributeNames: [],
         tableSize: 10,
         tableOptions: [10, 25, 100]
@@ -80,16 +82,25 @@ export class TableWidget extends OrAssetWidget {
     /* --------------------------------------- */
 
     protected loadAssets() {
-        if(this.widgetConfig.assetIds.find(id => !this.isAssetLoaded(id))) {
-           this.queryAssets({
-               ids: this.widgetConfig.assetIds,
-               select: {
-                   attributes: this.widgetConfig.attributeNames
-               }
-           }).then((assets) => {
-               this.loadedAssets = assets;
-           })
-        }
+        if(this.widgetConfig.assetAnyOfType = true) {
+            this.queryAssets({
+                types: [this.widgetConfig.assetType],
+                select: {
+                    attributes: this.widgetConfig.attributeNames
+                }
+            }).then((assets) => {
+                this.loadedAssets = assets;
+                })
+        } else if(this.widgetConfig.assetIds.find(id => !this.isAssetLoaded(id))) {
+               this.queryAssets({
+                   ids: this.widgetConfig.assetIds,
+                   select: {
+                       attributes: this.widgetConfig.attributeNames
+                   }
+               }).then((assets) => {
+                   this.loadedAssets = assets;
+               })
+            }
     }
 
     protected getColumns(attributeNames: string[]): TableColumn[] {

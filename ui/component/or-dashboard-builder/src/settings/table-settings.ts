@@ -79,6 +79,11 @@ export class TableSettings extends AssetWidgetSettings {
         this.notifyConfigUpdate();
     }
 
+    protected onAssetAnyOfTypeToggle(ev: OrInputChangedEvent) {
+        this.widgetConfig.assetAnyOfType = ev.detail.value;
+        this.notifyConfigUpdate();
+    }
+
     protected onTableSizeSelect(ev: OrInputChangedEvent) {
         const value = ev.detail.value || 10;
         this.widgetConfig.tableSize = value;
