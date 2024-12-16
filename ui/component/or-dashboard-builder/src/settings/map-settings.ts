@@ -76,6 +76,7 @@ export class MapSettings extends AssetWidgetSettings {
                 <!-- Panel where Asset type and the selected attribute can be customized -->
                 <settings-panel displayName="attributes" expanded="${true}">
                     <assettypes-panel .assetType="${this.widgetConfig.assetType}" .attributeNames="${this.widgetConfig.attributeName}" .config="${config}"
+                                      .allOfType="${this.widgetConfig.allOfType}" .assetIds="${this.widgetConfig.assetIds}"
                                       @assettype-select="${(ev: AssetTypeSelectEvent) => this.onAssetTypeSelect(ev)}"
                                       @alloftype-switch="${(ev: AssetAllOfTypeSwitchEvent) => this.onAssetAllOfTypeSwitch(ev)}"
                                       @assetids-select="${(ev: AssetIdsSelectEvent) => this.onAssetIdsSelect(ev)}"
@@ -157,6 +158,7 @@ export class MapSettings extends AssetWidgetSettings {
 
     protected onAssetAllOfTypeSwitch(ev: AssetAllOfTypeSwitchEvent) {
         this.widgetConfig.allOfType = ev.detail as boolean;
+        this.widgetConfig.assetIds = [];
         this.notifyConfigUpdate();
     }
 

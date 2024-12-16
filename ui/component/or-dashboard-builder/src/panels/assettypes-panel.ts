@@ -99,7 +99,7 @@ export class AssettypesPanel extends LitElement {
     }
 
     @property() // Whether to include all assets of this type or if the user can choose specific assets
-    protected allOfType?: boolean;
+    protected allOfType: boolean = false;
 
     @property() // IDs of assets; either undefined, a single entry, or multi select
     protected assetIds: undefined | string | string[];
@@ -126,7 +126,7 @@ export class AssettypesPanel extends LitElement {
             this._attributeSelectList = this.getAttributesByType(this.assetType)!;
             this.dispatchEvent(new AssetTypeSelectEvent(this.assetType));
         }
-        if (changedProps.has("allOfType") && this.allOfType) {
+        if (changedProps.has("allOfType")) {
             this.dispatchEvent(new AssetAllOfTypeSwitchEvent(this.allOfType));
         }
         if (changedProps.has("assetIds") && this.assetIds) {
@@ -281,8 +281,7 @@ export class AssettypesPanel extends LitElement {
     }
 
     protected onAssetAllOfTypeToggle(ev: OrInputChangedEvent) {
-        this.allOfType = !ev.detail.value;
-        this.assetIds = "";
+        this.allOfType = ev.detail.value;
     }
 
     protected _openAssetSelector(assetType: string, assetIds?: string[], multi = false) {

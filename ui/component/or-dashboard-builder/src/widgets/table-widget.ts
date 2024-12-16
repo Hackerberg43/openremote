@@ -13,7 +13,7 @@ import "@openremote/or-mwc-components/or-mwc-table";
 
 export interface TableWidgetConfig extends WidgetConfig {
     assetType?: string
-    allOfType: boolean,
+    allOfType?: boolean,
     assetIds: string[]
     attributeNames: string[],
     tableSize: number,

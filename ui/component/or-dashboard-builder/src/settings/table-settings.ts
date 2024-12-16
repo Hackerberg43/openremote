@@ -41,6 +41,7 @@ export class TableSettings extends AssetWidgetSettings {
                     <div style="padding-bottom: 12px;">
                         <assettypes-panel .assetType="${this.widgetConfig.assetType}" .config="${config}"
                                           .assetIds="${this.widgetConfig.assetIds}" .attributeNames="${this.widgetConfig.attributeNames}"
+                                          .allOfType="${this.widgetConfig.allOfType}"
                                           @assettype-select="${(ev: AssetTypeSelectEvent) => this.onAssetTypeSelect(ev)}"
                                           @alloftype-switch="${(ev: AssetAllOfTypeSwitchEvent) => this.onAssetAllOfTypeSwitch(ev)}"
                                           @assetids-select="${(ev: AssetIdsSelectEvent) => this.onAssetIdsSelect(ev)}"
@@ -73,6 +74,7 @@ export class TableSettings extends AssetWidgetSettings {
 
     protected onAssetAllOfTypeSwitch(ev: AssetAllOfTypeSwitchEvent) {
         this.widgetConfig.allOfType = ev.detail as boolean;
+        this.widgetConfig.assetIds = [];
         this.notifyConfigUpdate();
     }
 

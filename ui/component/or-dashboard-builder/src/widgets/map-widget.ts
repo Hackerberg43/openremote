@@ -38,7 +38,7 @@ export interface MapWidgetConfig extends WidgetConfig {
     max?: number,
     // Asset type related values
     assetType?: string,
-    allOfType: boolean,
+    allOfType?: boolean,
     valueType?: string,
     attributeName?: string,
     assetTypes: AssetDescriptor[],
@@ -99,21 +99,38 @@ export class MapWidget extends OrAssetWidget {
     }
 
     protected async loadAssets() {
-       if(this.widgetConfig.allOfType){
-            this.queryAssets({
-                types: [this.widgetConfig.assetType],
-                select: {
-                    attributes: this.widgetConfig.attributeName
-                }
-            }).then((assets) => {
-                this.loadedAssets = assets;
-                })
-        } else if(this.widgetConfig.assetType && this.widgetConfig.attributeName) {
+         if(this.widgetConfig.assetType && this.widgetConfig.attributeName && this.widgetConfig.allOfType) {
             this.fetchAssetsByType([this.widgetConfig.assetType], this.widgetConfig.attributeName).then((assets) => {
                 this.loadedAssets = assets;
             });
-        }
+        } else if(this.widgetConfig.assetType && this.widgetConfig.attributeName && !this.widgetConfig.allOfType) {
+            this.fetchAssetsById([this.widgetConfig.assetType], this.widgetConfig.attributeName, this.widgetConfig.assetIds).then((assets) => {
+                            this.loadedAssets = assets;
+                    });
+          }
     }
+
+    protected async fetchAssetsById(assetTypes: string[], attributeName: string, assetIds: string[]) {
+        let assets: Asset[] = [];
+        await manager.rest.api.AssetResource.queryAssets({
+            realm: {
+                name:manager.displayRealm
+            },
+            select: {
+                attributes: [attributeName, 'location']
+            },
+            types: assetTypes,
+            ids: assetIds,
+
+            }).then(response => {
+                assets = response.data;
+                this.markers = {};
+            }).catch((reason) => {
+                console.error(reason);
+                showSnackbar(undefined, "errorOccurred");
+            });
+            return assets;
+        }
 
     protected async fetchAssetsByType(assetTypes: string[], attributeName: string) {
         let assets: Asset[] = [];
