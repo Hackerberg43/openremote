@@ -38,6 +38,7 @@ export interface MapWidgetConfig extends WidgetConfig {
     max?: number,
     // Asset type related values
     assetType?: string,
+    allOfType: boolean,
     valueType?: string,
     attributeName?: string,
     assetTypes: AssetDescriptor[],
@@ -56,6 +57,7 @@ function getDefaultWidgetConfig(): MapWidgetConfig {
         thresholds: [[0, "#4caf50"], [75, "#ff9800"], [90, "#ef5350"]],
         assetTypes: [],
         assetType: undefined,
+        allOfType: true,
         assetIds: [],
         attributes: [],
     } as MapWidgetConfig;
@@ -97,7 +99,16 @@ export class MapWidget extends OrAssetWidget {
     }
 
     protected async loadAssets() {
-        if(this.widgetConfig.assetType && this.widgetConfig.attributeName) {
+       if(this.widgetConfig.allOfType){
+            this.queryAssets({
+                types: [this.widgetConfig.assetType],
+                select: {
+                    attributes: this.widgetConfig.attributeName
+                }
+            }).then((assets) => {
+                this.loadedAssets = assets;
+                })
+        } else if(this.widgetConfig.assetType && this.widgetConfig.attributeName) {
             this.fetchAssetsByType([this.widgetConfig.assetType], this.widgetConfig.attributeName).then((assets) => {
                 this.loadedAssets = assets;
             });
