@@ -74,7 +74,6 @@ export class TableSettings extends AssetWidgetSettings {
 
     protected onAssetAllOfTypeSwitch(ev: AssetAllOfTypeSwitchEvent) {
         this.widgetConfig.allOfType = ev.detail as boolean;
-        this.widgetConfig.assetIds = [];
         this.notifyConfigUpdate();
     }
 

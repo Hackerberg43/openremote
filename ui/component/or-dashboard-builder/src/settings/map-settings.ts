@@ -158,7 +158,6 @@ export class MapSettings extends AssetWidgetSettings {
 
     protected onAssetAllOfTypeSwitch(ev: AssetAllOfTypeSwitchEvent) {
         this.widgetConfig.allOfType = ev.detail as boolean;
-        this.widgetConfig.assetIds = [];
         this.notifyConfigUpdate();
     }
 
