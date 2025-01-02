@@ -131,26 +131,34 @@ export class AttributeHistoryWidget extends OrAssetWidget {
         }
     }
 
-    protected render(): TemplateResult {
-
+    protected getPanelContent(hostElement: LitElement): TemplateResult | undefined {
 
         //Lege config, checken of dit instelbaar moet zijn
         const config : HistoryConfig = {};
 
-        if (this.loadedAssets) {
-            const historyAttrs = Object.values(this.loadedAssets[0].attributes!).filter((attr) =>
+        const historyAttrs = Object.values(this.loadedAssets[0].attributes!).filter((attr) =>
                     (attr.meta && (attr.meta.hasOwnProperty(WellknownMetaItems.STOREDATAPOINTS) ? attr.meta[WellknownMetaItems.STOREDATAPOINTS] : attr.meta.hasOwnProperty(WellknownMetaItems.AGENTLINK))));
-        }
+
 
         if (historyAttrs.length === 0) {
             this._error = "noDatapointsAttributes";
             return html`<or-translate id="error-txt" .value="${this._error}"></or-translate>`;
         }
 
+        let selectedAttribute: Attribute<any> | undefined;
 
-
-    
-
+        const attributeChanged = (attributeName: string) => {
+            if (hostElement.shadowRoot) {
+                const attributeHistory = hostElement.shadowRoot.getElementById("attribute-history") as OrAttributeHistory;
+                if (attributeName && attributeHistory) {
+                    let attribute = this.loadedAssets[0].attributes && this.loadedAssets[0].attributes![attributeName];
+                    const descriptors = AssetModelUtil.getAttributeAndValueDescriptors(this.loadedAssets[0].type, attribute!.name, attribute);
+                    const label = Util.getAttributeLabel(attribute, descriptors[0], this.loadedAssets[0].type, true);
+                    attributeHistory.attribute = attribute;
+                    selectedAttribute = attribute!;
+                }
+            }
+        };
 
         const options = historyAttrs.map((attr) => {
             const descriptors = AssetModelUtil.getAttributeAndValueDescriptors(this.loadedAssets[0]?.type, attr.name, attr);
@@ -160,7 +168,7 @@ export class AttributeHistoryWidget extends OrAssetWidget {
 
         let attrTemplate = html`
                 <div id="attribute-picker">
-                    <or-mwc-input .checkAssetWrite="${false}" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.changeAttribute(ev.detail.value)}}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
+                    <or-mwc-input .checkAssetWrite="${false}" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(evt: OrInputChangedEvent) => attributeChanged(evt.detail.value)}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
                 </div>`;
 
         return html`
@@ -196,5 +204,16 @@ export class AttributeHistoryWidget extends OrAssetWidget {
             ${attrTemplate}
             <or-attribute-history id="attribute-history" .config="${config}" .assetType="${this.loadedAssets[0]?.type}" .assetId="${this.loadedAssets[0]?.id}"></or-attribute-history>
         `;
+    }
+
+    protected render(): TemplateResult {
+        const historyPanel = this.getPanelContent(this) || ``;
+
+        return html`
+        <div id="wrapper">
+            ${historyPanel}
+        </div>
+        `;
+
     }
 }
