@@ -40,10 +40,10 @@ function getDefaultWidgetConfig() {
 const styling = css`
   #widget-wrapper {
     height: 100%;
+    overflow: auto;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    overflow: hidden;
   }
     
   #error-txt {
@@ -54,10 +54,6 @@ const styling = css`
     text-align: center;
   }
 
-  .attr-input {
-    width: 100%;
-    box-sizing: border-box;
-  }
 `
 
 @customElement("attribute-history-widget")
@@ -82,7 +78,7 @@ export class AttributeHistoryWidget extends OrAssetWidget {
             displayName: "Attribute History",
             displayIcon: "chart-line",
             minColumnWidth: 4,
-            minColumnHeight: 2,
+            minColumnHeight: 4,
             getContentHtml(config: AttributeHistoryWidgetConfig): OrWidget {
                 return new AttributeHistoryWidget(config);
             },
@@ -139,13 +135,13 @@ export class AttributeHistoryWidget extends OrAssetWidget {
         const historyAttrs = Object.values(this.loadedAssets[0].attributes!).filter((attr) =>
                     (attr.meta && (attr.meta.hasOwnProperty(WellknownMetaItems.STOREDATAPOINTS) ? attr.meta[WellknownMetaItems.STOREDATAPOINTS] : attr.meta.hasOwnProperty(WellknownMetaItems.AGENTLINK))));
 
+        let selectedAttribute: Attribute<any> | undefined;
 
         if (historyAttrs.length === 0) {
             this._error = "noDatapointsAttributes";
             return html`<or-translate id="error-txt" .value="${this._error}"></or-translate>`;
-        }
 
-        let selectedAttribute: Attribute<any> | undefined;
+        }
 
         const attributeChanged = (attributeName: string) => {
             if (hostElement.shadowRoot) {
@@ -167,16 +163,16 @@ export class AttributeHistoryWidget extends OrAssetWidget {
             }).sort(Util.sortByString((item) => item[1] === undefined ? item[0]! : item[1]));
 
         let attrTemplate = html`
-                <div id="attribute-picker">
-                    <or-mwc-input .checkAssetWrite="${false}" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(evt: OrInputChangedEvent) => attributeChanged(evt.detail.value)}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
-                </div>`;
+                <or-mwc-input id="attribute-picker" .checkAssetWrite="${false}" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(evt: OrInputChangedEvent) => attributeChanged(evt.detail.value)}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
+                `;
+
+
 
         return html`
             <style>
                #attribute-picker {
-                   flex: 0;
                    margin: 0 0 10px 0;
-                   position: unset;
+                   width: 100%;
                }
 
                #attribute-picker > or-mwc-input {
@@ -185,24 +181,17 @@ export class AttributeHistoryWidget extends OrAssetWidget {
 
                 or-attribute-history {
                     width: 100%;
+                    height: 100%;
+                    --or-attribute-history-chart-container-flex: 1;
+                    --or-attribute-history-chart-container-min-height: 200px;
                     --or-attribute-history-controls-margin: 0 0 10px -5px;
                     --or-attribute-history-controls-justify-content: flex-start;
+
                 }
-
-               @media screen and (min-width: 1900px) {
-                   #attribute-picker {
-                       position: absolute;
-                   }
-
-                   or-attribute-history {
-                       --or-attribute-history-controls-margin: 0 0 10px 0;
-                       --or-attribute-history-controls-justify-content: flex-end;
-                       min-height: 70px;
-                   }
-               }
             </style>
             ${attrTemplate}
             <or-attribute-history id="attribute-history" .config="${config}" .assetType="${this.loadedAssets[0]?.type}" .assetId="${this.loadedAssets[0]?.id}"></or-attribute-history>
+
         `;
     }
 
@@ -210,10 +199,9 @@ export class AttributeHistoryWidget extends OrAssetWidget {
         const historyPanel = this.getPanelContent(this) || ``;
 
         return html`
-        <div id="wrapper">
+        <div id="widget-wrapper">
             ${historyPanel}
         </div>
         `;
-
     }
 }

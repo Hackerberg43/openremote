@@ -146,7 +146,7 @@ export class AssettypesPanel extends LitElement {
                     const assetIds = (typeof this.assetIds === 'string') ? [this.assetIds] : this.assetIds;
                     return html`
                         <div>
-                            <or-mwc-input .type="${InputType.BUTTON}" .label="${(this.assetIds?.length || 0) + ' ' + i18next.t('assets')}" .disabled="${!this.assetType}" fullWidth outlined comfortable style="width: 100%;"
+                            <or-mwc-input .type="${InputType.BUTTON}" .label="${(assetIds?.length || 0) + ' ' + i18next.t('assets')}" .disabled="${!this.assetType}" fullWidth outlined comfortable style="width: 100%;"
                                           @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this._openAssetSelector(this.assetType!, assetIds, this.config.assets?.multi)}"
                             ></or-mwc-input>
                         </div>

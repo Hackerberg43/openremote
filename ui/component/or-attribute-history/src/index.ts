@@ -108,6 +108,8 @@ const style = css`
         --internal-or-attribute-history-text-color: var(--or-attribute-history-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
         --internal-or-attribute-history-controls-margin: var(--or-attribute-history-controls-margin, 10px 0);
         --internal-or-attribute-history-controls-justify-content: var(--or-attribute-history-controls-justify-content, flex-end);
+        --internal-or-attribute-history-chart-container-flex: var(--or-attribute-history-chart-container-flex, 0);
+        --internal-or-attribute-history-chart-container-min-height: var(--or-attribute-history-chart-container-min-height, 250px);
         --internal-or-attribute-history-graph-fill-color: var(--or-attribute-history-graph-fill-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));       
         --internal-or-attribute-history-graph-fill-opacity: var(--or-attribute-history-graph-fill-opacity, 1);       
         --internal-or-attribute-history-graph-line-color: var(--or-attribute-history-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));       
@@ -186,7 +188,9 @@ const style = css`
     
     #chart-container {
         position: relative;
-        min-height: 250px;
+        min-height: var(--internal-or-attribute-history-chart-container-min-height);
+        flex: var(--internal-or-attribute-history-chart-container-flex);
+
     }
         
     #table-container {
