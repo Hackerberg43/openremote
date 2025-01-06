@@ -40,7 +40,7 @@ function getDefaultWidgetConfig() {
 const styling = css`
   #widget-wrapper {
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -129,7 +129,7 @@ export class AttributeHistoryWidget extends OrAssetWidget {
 
     protected getPanelContent(hostElement: LitElement): TemplateResult | undefined {
 
-        //Lege config, checken of dit instelbaar moet zijn
+        //No specific configuration
         const config : HistoryConfig = {};
 
         const historyAttrs = Object.values(this.loadedAssets[0].attributes!).filter((attr) =>
@@ -175,13 +175,10 @@ export class AttributeHistoryWidget extends OrAssetWidget {
                    width: 100%;
                }
 
-               #attribute-picker > or-mwc-input {
-                   width: 250px;
-               }
-
                 or-attribute-history {
                     width: 100%;
                     height: 100%;
+                    overflow: hidden;
                     --or-attribute-history-chart-container-flex: 1;
                     --or-attribute-history-chart-container-min-height: 200px;
                     --or-attribute-history-controls-margin: 0 0 10px -5px;

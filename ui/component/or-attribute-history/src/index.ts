@@ -190,12 +190,13 @@ const style = css`
         position: relative;
         min-height: var(--internal-or-attribute-history-chart-container-min-height);
         flex: var(--internal-or-attribute-history-chart-container-flex);
-
+        overflow: auto;
     }
         
     #table-container {
         height: 100%;
         min-height: 250px;
+        overflow: auto;
     }
     
     #table {
