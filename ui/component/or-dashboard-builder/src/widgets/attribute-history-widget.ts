@@ -12,23 +12,21 @@ import {Util} from "@openremote/core";
 import "@openremote/or-attribute-input";
 import {HistoryConfig, OrAttributeHistory} from "@openremote/or-attribute-history";
 import {InputType, OrInputChangedEvent, OrMwcInput} from "@openremote/or-mwc-components/or-mwc-input";
-import {Attribute, AttributeRef, AssetModelUtil, WellknownMetaItems} from "@openremote/model";
+import {Attribute, AssetModelUtil, WellknownMetaItems} from "@openremote/model";
 import i18next, {InitOptions, TOptions} from "i18next";
 
 // Deze nog aanpassen met settings voor jouw widget
 export interface AttributeHistoryWidgetConfig extends WidgetConfig {
-    attributeRefs: AttributeRef[];
     readonly: boolean,
     showHelperText: boolean,
     // Asset type related values
     assetType?: string,
-    attributeName?: string,
+    attributeName: string,
     assetId: string
 }
 
 function getDefaultWidgetConfig() {
     return {
-        attributeRefs: [],
         readonly: false,
         showHelperText: true,
         assetType: undefined,
@@ -83,10 +81,7 @@ export class AttributeHistoryWidget extends OrAssetWidget {
                 return new AttributeHistoryWidget(config);
             },
             getSettingsHtml(config: AttributeHistoryWidgetConfig): WidgetSettings {
-                const settings = new AttributeHistorySettings(config);
-                //settings.setTimePresetOptions(getDefaultTimePresetOptions());
-                //settings.setSamplingOptions(getDefaultSamplingOptions());
-                return settings;
+                return new AttributeHistorySettings(config);
             },
             getDefaultConfig(): AttributeHistoryWidgetConfig {
                 return getDefaultWidgetConfig();
@@ -112,11 +107,6 @@ export class AttributeHistoryWidget extends OrAssetWidget {
         return super.willUpdate(changedProps);
     }
 
-    protected changeAttribute(attribute: string) {
-        this.widgetConfig.attributeName = attribute;
-        this.refreshContent(true);
-    }
-
     protected loadAsset() {
         if(!this.isAssetLoaded(this.widgetConfig.assetId)) {
            this.queryAssets({
@@ -132,15 +122,15 @@ export class AttributeHistoryWidget extends OrAssetWidget {
         //No specific configuration
         const config : HistoryConfig = {};
 
-        const historyAttrs = Object.values(this.loadedAssets[0].attributes!).filter((attr) =>
-                    (attr.meta && (attr.meta.hasOwnProperty(WellknownMetaItems.STOREDATAPOINTS) ? attr.meta[WellknownMetaItems.STOREDATAPOINTS] : attr.meta.hasOwnProperty(WellknownMetaItems.AGENTLINK))));
+        //Make list of selectable attributes
+        const historyAttrs = Object.values(this.loadedAssets[0].attributes! ?? {}).filter((attr) =>
+             (attr.meta && (attr.meta.hasOwnProperty(WellknownMetaItems.STOREDATAPOINTS) ? attr.meta[WellknownMetaItems.STOREDATAPOINTS] : attr.meta.hasOwnProperty(WellknownMetaItems.AGENTLINK))));
 
-        let selectedAttribute: Attribute<any> | undefined;
 
+        // Throw error if asset doesnt contain attributes with historic datapoints.
         if (historyAttrs.length === 0) {
             this._error = "noDatapointsAttributes";
             return html`<or-translate id="error-txt" .value="${this._error}"></or-translate>`;
-
         }
 
         const attributeChanged = (attributeName: string) => {
@@ -151,7 +141,6 @@ export class AttributeHistoryWidget extends OrAssetWidget {
                     const descriptors = AssetModelUtil.getAttributeAndValueDescriptors(this.loadedAssets[0].type, attribute!.name, attribute);
                     const label = Util.getAttributeLabel(attribute, descriptors[0], this.loadedAssets[0].type, true);
                     attributeHistory.attribute = attribute;
-                    selectedAttribute = attribute!;
                 }
             }
         };
@@ -163,10 +152,8 @@ export class AttributeHistoryWidget extends OrAssetWidget {
             }).sort(Util.sortByString((item) => item[1] === undefined ? item[0]! : item[1]));
 
         let attrTemplate = html`
-                <or-mwc-input id="attribute-picker" .checkAssetWrite="${false}" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(evt: OrInputChangedEvent) => attributeChanged(evt.detail.value)}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
+                <or-mwc-input id="attribute-picker" .label="${i18next.t("attribute")}" @or-mwc-input-changed="${(evt: OrInputChangedEvent)  =>  attributeChanged(evt.detail.value)}" .type="${InputType.SELECT}" .options="${options}"></or-mwc-input>
                 `;
-
-
 
         return html`
             <style>

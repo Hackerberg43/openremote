@@ -34,7 +34,7 @@ export class AttributeHistorySettings extends AssetWidgetSettings {
         return html`
             <div>
                 <!-- Panel where Asset type and the selected default attribute can be customized -->
-                <settings-panel displayName="attributes" expanded="${true}">
+                <settings-panel displayName="selectAsset" expanded="${true}">
                     <assettypes-panel .assetType="${this.widgetConfig.assetType}" .config="${config}"
                                       .assetIds="${this.widgetConfig.assetId}"
                                       @assettype-select="${(ev: AssetTypeSelectEvent) => this.onAssetTypeSelect(ev)}"
@@ -75,11 +75,6 @@ export class AttributeHistorySettings extends AssetWidgetSettings {
 
     protected onHelperTextToggle(ev: OrInputChangedEvent) {
         this.widgetConfig.showHelperText = ev.detail.value;
-        this.notifyConfigUpdate();
-    }
-
-    protected onAttributesSelect(ev: AttributeNamesSelectEvent) {
-        this.widgetConfig.attributeName = ev.detail as string;
         this.notifyConfigUpdate();
     }
 

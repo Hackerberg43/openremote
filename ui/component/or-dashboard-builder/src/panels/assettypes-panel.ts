@@ -143,7 +143,8 @@ export class AssettypesPanel extends LitElement {
 
                 <!-- Select one or more assets -->
                 ${when(this.config.assets?.enabled, () => {
-                    const assetIds = (typeof this.assetIds === 'string') ? [this.assetIds] : this.assetIds;
+                    //Convert assetIds into a list if it is a string, and into an empty list if it is an empty string.
+                    const assetIds = (typeof this.assetIds === 'string') ? (this.assetIds ? [this.assetIds] : []) : this.assetIds;
                     return html`
                         <div>
                             <or-mwc-input .type="${InputType.BUTTON}" .label="${(assetIds?.length || 0) + ' ' + i18next.t('assets')}" .disabled="${!this.assetType}" fullWidth outlined comfortable style="width: 100%;"
