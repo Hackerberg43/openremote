@@ -647,6 +647,9 @@ export class OrDashboardBuilder extends LitElement {
                                             <or-mwc-input id="share-btn" class="small-btn" .disabled="${(this.selectedDashboard == null)}" type="${InputType.BUTTON}" icon="open-in-new"
                                                           @or-mwc-input-changed="${() => { this.openDashboardInInsights(); }}"
                                             ></or-mwc-input>
+                                            <or-mwc-input id="print-btn" class="small-btn" .disabled="${(this.selectedDashboard == null)}" type="${InputType.BUTTON}" icon="printer-outline"
+                                                          @or-mwc-input-changed="${() => { this.openPrintDialog(); }}">
+                                            </or-mwc-input>
                                             <or-mwc-input id="view-btn" class="hideMobile" ?hidden="${this.selectedDashboard == null || this._isReadonly() || !this._hasEditAccess()}" type="${InputType.BUTTON}" outlined icon="pencil" label="editAsset"
                                                           @or-mwc-input-changed="${() => { this.dispatchEvent(new CustomEvent('editToggle', { detail: true })); }}">
                                             </or-mwc-input>
@@ -665,7 +668,7 @@ export class OrDashboardBuilder extends LitElement {
                             ` : undefined}
                             <div id="builder" style="${styleMap(builderStyles)}">
                                 ${(this.selectedDashboard != null) ? html`
-                                    <or-dashboard-preview class="editor" style="background: transparent;"
+                                    <or-dashboard-preview class="editor" style="background: transparent;" id="dashboard-preview"
                                                           .realm="${this.realm}" .template="${this.currentTemplate}"
                                                           .selectedWidget="${this.selectedDashboard?.template?.widgets?.find(w => w.id == this.selectedWidgetId)}" .editMode="${this.editMode}"
                                                           .fullscreen="${this.fullscreen}" .readonly="${this._isReadonly()}"
@@ -753,4 +756,63 @@ export class OrDashboardBuilder extends LitElement {
 
     /* ======================== */
 
+    protected openPrintDialog() {
+        if(this.selectedDashboard != null) {
+            if (this.shadowRoot) {
+                const element = this.shadowRoot.getElementById('dashboard-preview') as HTMLElement;
+
+                if (!element) {
+                    console.error('DashboardPreview element not found');
+                    return;
+                } else {
+                    console.log('Element found:', element)
+                }
+
+                // Create a new window for printing
+                const printWindow = window.open('', '_blank');
+
+                if (!printWindow) {
+                    console.error('Failed to open a new window');
+                    return;
+                }
+
+                // Add standard text before or after the selected HTML content
+                const standardText = `<div style="margin-bottom: 20px; font-size: 16px;">
+                This is standard text added for printing purposes.
+                </div>`;
+
+                // Write the HTML content into the new window
+                printWindow.document.write(`
+                                         <!DOCTYPE html>
+                                             <html>
+                                             <head>
+                                               <title>Print Preview</title>
+                                               <style>
+                                                 /* Include styles for better print formatting */
+                                                 body {
+                                                   margin: 0;
+                                                   padding: 10px;
+                                                   font-family: Arial, sans-serif;
+                                                 }
+                                               </style>
+                                             </head>
+                                             <body>
+                                               ${standardText} 
+                                               ${element.shadowRoot ? element.shadowRoot.innerHTML : element.innerHTML}
+                                             </body>
+                                             </html>
+                                           `);
+
+                // Close the document stream to ensure everything loads
+                printWindow.document.close();
+
+                // Wait for the content to load, then trigger the print dialog
+                printWindow.onload = () => {
+                    printWindow.print();
+                    printWindow.close();
+                };
+            }
+        }
+
+    }
 }
