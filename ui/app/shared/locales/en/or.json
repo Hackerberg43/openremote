@@ -807,7 +807,7 @@
     "lastKnown": "(last known)",
     "lineColor": "Line color",
     "maxConcurrentDatapoints": "Max concurrent datapoints",
-    "showSymbolMaxDatapoints": "Upper limit to show datapoint symbols"
+    "showSymbolMaxDatapoints": "Upper limit to show datapoint symbols",
     "noData": "No data",
     "noDataOrMethod": "No data or no method per interval selected for selected attributes"
   },
