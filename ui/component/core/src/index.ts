@@ -685,14 +685,17 @@ export class Manager implements EventProviderFactory {
      * Checks the keycloak access token to gather the preferred language of a user.
      */
     public async getUserPreferredLanguage(keycloak = this._keycloak): Promise<string | undefined> {
+        if (!keycloak) return;
 
-        if(keycloak) {
-            const profile: Keycloak.KeycloakProfile | undefined = keycloak?.profile || await keycloak?.loadUserProfile();
-            if(profile?.attributes) {
+        try {
+            const profile: Keycloak.KeycloakProfile | undefined =
+                keycloak.profile || await keycloak.loadUserProfile();
+
+            if (profile?.attributes) {
                 const attributes = new Map(Object.entries(profile.attributes));
-                if(attributes.has("locale")) {
+                if (attributes.has("locale")) {
                     const attr = attributes.get("locale") as any[];
-                    if(typeof attr[0] === "string") {
+                    if (typeof attr[0] === "string") {
                         return attr[0];
                     }
                 }
@@ -700,6 +703,7 @@ export class Manager implements EventProviderFactory {
             } else {
                 console.warn("Could not get user language from keycloak: no valid keycloak user profile was found.");
             }
+        } catch (err: any) {
         }
     }
 
