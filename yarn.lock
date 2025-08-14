@@ -1562,6 +1562,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@openremote/or-live-chart@workspace:ui/component/or-live-chart":
+  version: 0.0.0-use.local
+  resolution: "@openremote/or-live-chart@workspace:ui/component/or-live-chart"
+  dependencies:
+    "@openremote/core": "workspace:*"
+    "@openremote/model": "workspace:*"
+    "@openremote/or-components": "workspace:*"
+    "@openremote/or-icon": "workspace:*"
+    "@openremote/or-mwc-components": "workspace:*"
+    "@openremote/or-translate": "workspace:*"
+    "@openremote/util": "workspace:*"
+    echarts: "npm:^5.4.0"
+    lit: "npm:^2.0.2"
+    moment: "npm:^2.29.4"
+  languageName: unknown
+  linkType: soft
+
 "@openremote/or-log-viewer@workspace:ui/component/or-log-viewer":
   version: 0.0.0-use.local
   resolution: "@openremote/or-log-viewer@workspace:ui/component/or-log-viewer"
@@ -4109,7 +4126,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"echarts@npm:~5.6.0":
+"echarts@npm:^5.4.0, echarts@npm:~5.6.0":
   version: 5.6.0
   resolution: "echarts@npm:5.6.0"
   dependencies:

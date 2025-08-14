@@ -110,10 +110,14 @@ export class KpiWidget extends OrAssetWidget {
                         </div>
                     `;
                 })}
-                <or-attribute-card .assets="${this.loadedAssets}" .assetAttributes="${this.assetAttributes}" .period="${this.widgetConfig.period}"
-                                   .deltaFormat="${this.widgetConfig.deltaFormat}" .mainValueDecimals="${this.widgetConfig.decimals}"
-                                   showControls="${this.widgetConfig?.showTimestampControls}" showTitle="${false}" hideAttributePicker="${true}" style="height: 100%;">
-                </or-attribute-card>
+                <or-live-chart
+                        assetId="47AzAoDCgyOIRa8gIRHwGn"
+                        attributeName="power"
+                        timeframe="30minutes"
+                        refreshInterval="1second"
+                        style="height: 100%; width: 100%;">
+                </or-live-chart>
+
             </div>
         `;
     }

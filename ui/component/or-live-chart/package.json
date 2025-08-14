@@ -21,9 +21,9 @@
   "dependencies": {
     "@openremote/core": "workspace:*",
     "@openremote/model": "workspace:*",
+    "@openremote/or-components": "workspace:*",
     "@openremote/or-icon": "workspace:*",
     "@openremote/or-mwc-components": "workspace:*",
-    "@openremote/or-components": "workspace:*",
     "@openremote/or-translate": "workspace:*",
     "echarts": "^5.4.0",
     "lit": "^2.0.2",
