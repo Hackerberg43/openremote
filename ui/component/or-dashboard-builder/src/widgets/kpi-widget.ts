@@ -98,7 +98,7 @@ export class KpiWidget extends OrAssetWidget {
 
     protected render(): TemplateResult {
         return html`
-            <div style="position: relative; height: 100%; overflow: hidden;">
+            <div style="position: relative; height: 100%; overflow: hidden; padding-bottom: 10px">
                 ${when(this._loading || this._error, () => {
                     // Have to use `position: absolute` with white background due to rendering inconsistencies in or-attribute-card
                     return html`

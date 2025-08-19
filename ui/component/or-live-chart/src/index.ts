@@ -53,7 +53,6 @@ const style = css`
         --internal-or-live-chart-graph-line-color: var(--or-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
         
         width: 100%;
-        min-height: 300px;
         height: 100%;
         display: block;
     }
@@ -103,7 +102,7 @@ const style = css`
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 15px;
+        padding: 10px;
         flex: 0 0 auto;
         border-bottom: 1px solid var(--internal-or-live-chart-border-color);
     }
@@ -132,7 +131,6 @@ const style = css`
         position: relative;
         overflow: hidden;
         width: 100%;
-        min-height: 200px;
     }
     
     #chart {
@@ -273,6 +271,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _lastReceivedValue?: number;
     protected _timeframeMs: number = 30 * 60 * 1000; // 30 minutes default
     protected _refreshIntervalMs: number = 60 * 1000; // 1 minute default
+    protected _mouseEnterHandler?: any;
+    protected _mouseLeaveHandler?: any;
 
     constructor() {
         super();
@@ -291,6 +291,21 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     disconnectedCallback() {
         super.disconnectedCallback();
         this._cleanup();
+    }
+
+    shouldUpdate(changedProperties: PropertyValues): boolean {
+        // Allow current value updates to render, but prevent other frequent updates
+        if (changedProperties.size === 1) {
+            const singleChange = Array.from(changedProperties.keys())[0] as string;
+            if (singleChange === '_currentValue') {
+                return true; // Allow current value updates
+            }
+            if (singleChange === '_data' || singleChange === '_lastEventTime') {
+                return false; // Block data/timing only updates
+            }
+        }
+        
+        return true; // Allow all other updates (loading, error, config changes, etc.)
     }
 
     updated(changedProperties: PropertyValues) {
@@ -547,6 +562,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             },
             tooltip: {
                 trigger: "axis",
+                confine: true,
                 axisPointer: {
                     type: "line"
                 },
@@ -569,7 +585,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             },
             yAxis: {
                 type: "value",
-                show: true,
+                show: false,
                 scale: true
             },
             series: []
@@ -580,6 +596,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         // Handle resize
         this._setupResizeHandler();
+        // eventlisteners
+        this._toggleChartEventListeners(true);
     }
 
     protected _updateChart() {
@@ -716,8 +734,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         return html`
             <div class="panel">
-
-                
                 <div class="panel-content">
                     ${when(this._currentValue !== undefined, () => html`
                         <div class="current-value-wrapper">
@@ -782,7 +798,31 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             </div>
         `;
     }
+
+    protected _toggleChartEventListeners(connect: boolean){
+        if (connect) {
+            this._mouseEnterHandler = this._chartElem.addEventListener('mouseenter', () => {
+                this._chart!.setOption({
+                    xAxis: {show: true},
+                    yAxis: {show: true}
+                });
+            });
+
+            this._mouseLeaveHandler = this._chartElem.addEventListener('mouseleave', () => {
+                this._chart!.setOption({
+                    xAxis: { show: false},
+                    yAxis: { show: false}
+                });
+            });
+        }
+        else if (!connect) {
+            this._chartElem?.removeEventListener('mouseenter', this._mouseEnterHandler);
+            this._chartElem?.removeEventListener('mouseleave', this._mouseLeaveHandler);
+
+        }
+    }
 }
+
 
 // Ensure component is available for import
 //declare global {
