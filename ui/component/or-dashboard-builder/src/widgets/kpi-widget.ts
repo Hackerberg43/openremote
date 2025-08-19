@@ -137,7 +137,24 @@ export class KpiWidget extends OrAssetWidget {
                                 icon: 'battery',
                                 upperThreshold: 100,
                                 lowerThreshold: 30
-                            }
+                            },
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'status',
+                                icon: 'connection',
+                                okValues: ['connected', 'online'],
+                                warningValues: ['connecting'],
+                                errorValues: ['disconnected', 'offline']
+                            },
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'model',
+                                icon: 'connection',
+                                okValues: ['connected', 'online'],
+                                warningValues: ['connecting'],
+                                errorValues: ['disconnected', 'offline']
+                            } 
+
                         ]}"
                         style="height: 100%; width: 100%;">
                 </or-live-chart>
