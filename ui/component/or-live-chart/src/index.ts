@@ -92,7 +92,7 @@ const style = css`
     
     .panel-content {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         width: 100%;
         flex: 1;
         overflow: hidden;
@@ -104,7 +104,6 @@ const style = css`
         justify-content: center;
         padding: 10px;
         flex: 0 0 auto;
-        border-bottom: 1px solid var(--internal-or-live-chart-border-color);
     }
     
     .current-value-icon {
@@ -735,6 +734,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return html`
             <div class="panel">
                 <div class="panel-content">
+                    <div class="chart-container">
+                        <div id="chart"></div>
+                    </div>
+                    
                     ${when(this._currentValue !== undefined, () => html`
                         <div class="current-value-wrapper">
                             ${this._asset ? html`
@@ -748,15 +751,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             ` : ''}
                         </div>
                     `)}
-                    
-                    <div class="chart-container">
-                        <div id="chart"></div>
-                    </div>
-                    
-                    <div class="controls-wrapper">
-                        <div class="control-group">
-                            <!-- Timeframe Selection -->
-                            ${getContentWithMenuTemplate(
+                </div>
+                <div class="controls-wrapper">
+                    <div class="control-group">
+                        <!-- Timeframe Selection -->
+                        ${getContentWithMenuTemplate(
                                 html`<or-mwc-input .type="${InputType.BUTTON}" 
                                                    label="${this.timeframe === '5minutes' ? '5 min' : this.timeframe === '30minutes' ? '30 min' : '1 hour'}"
                                                    ?disabled="${this.disabled}"></or-mwc-input>`,
@@ -769,10 +768,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                                 (value: string | string[]) => {
                                     this.timeframe = value as TimeframeOption;
                                 }
-                            )}
-                            
-                            <!-- Refresh Interval Selection -->
-                            ${getContentWithMenuTemplate(
+                        )}
+
+                        <!-- Refresh Interval Selection -->
+                        ${getContentWithMenuTemplate(
                                 html`<or-mwc-input .type="${InputType.BUTTON}" 
                                                    label="${this.refreshInterval === '1second' ? '1 sec' : '1 min'}"
                                                    ?disabled="${this.disabled}"></or-mwc-input>`,
@@ -784,14 +783,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                                 (value: string | string[]) => {
                                     this.refreshInterval = value as RefreshIntervalOption;
                                 }
-                            )}
-                        </div>
-                        
-                        <div class="control-group">
-                            <div class="status-indicator">
-                                <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
-                                <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
-                            </div>
+                        )}
+                    </div>
+
+                    <div class="control-group">
+                        <div class="status-indicator">
+                            <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
+                            <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
                         </div>
                     </div>
                 </div>
@@ -803,14 +801,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         if (connect) {
             this._mouseEnterHandler = this._chartElem.addEventListener('mouseenter', () => {
                 this._chart!.setOption({
-                    xAxis: {show: true},
                     yAxis: {show: true}
                 });
             });
 
             this._mouseLeaveHandler = this._chartElem.addEventListener('mouseleave', () => {
                 this._chart!.setOption({
-                    xAxis: { show: false},
                     yAxis: { show: false}
                 });
             });
