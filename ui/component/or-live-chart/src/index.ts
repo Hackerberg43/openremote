@@ -22,7 +22,6 @@ import {LineChart, LineSeriesOption} from "echarts/charts";
 import {GridComponent, TooltipComponent, GridComponentOption, TooltipComponentOption} from "echarts/components";
 import {CanvasRenderer} from "echarts/renderers";
 import moment from "moment";
-import {getAssetDescriptorIconTemplate} from "@openremote/or-icon";
 import {when} from "lit/directives/when.js";
 import {InputType, OrInputChangedEvent} from "@openremote/or-mwc-components/or-mwc-input";
 import "@openremote/or-mwc-components/or-mwc-input";
@@ -45,11 +44,6 @@ export class OrLiveChartCurrentValue extends LitElement {
                 justify-content: center;
                 padding: 10px;
                 flex: 0 0 auto;
-            }
-            .current-value-icon {
-                font-size: 24px;
-                margin-right: 10px;
-                display: flex;
             }
             .current-value-number {
                 color: var(--internal-or-live-chart-text-color, #333);
@@ -80,9 +74,6 @@ export class OrLiveChartCurrentValue extends LitElement {
         return html`
             <div class="current-value-wrapper">
                 ${this.asset ? html`
-                    <span class="current-value-icon">
-                        ${getAssetDescriptorIconTemplate(AssetModelUtil.getAssetDescriptor(this.asset.type!))}
-                    </span>
                 ` : ''}
                 <span class="current-value-number">${this.value}</span>
                 ${this.unit ? html`
