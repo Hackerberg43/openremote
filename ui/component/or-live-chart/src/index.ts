@@ -51,37 +51,30 @@ const style = css`
         --internal-or-live-chart-border-color: var(--or-live-chart-border-color, rgba(76, 76, 76, 0.6));
         --internal-or-live-chart-text-color: var(--or-live-chart-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
         --internal-or-live-chart-graph-line-color: var(--or-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
-        
+
         width: 100%;
         height: 100%;
         display: block;
     }
-    
+
     :host([hidden]) {
         display: none;
     }
-    
+
     .panel {
         position: relative;
         height: 100%;
         display: flex;
         flex-direction: column;
+        padding: 0px 15px 0px 15px;
         background: var(--internal-or-live-chart-background-color);
         border: 1px solid var(--internal-or-live-chart-border-color);
-        border-radius: 5px;
+        border-radius: 25px;
+        box-shadow: inset 0 0 2px #000000,
+        0 0 60px rgba(0, 255, 0, 0)
     }
-    
-    .panel-title {
-        display: flex;
-        align-items: center;
-        font-weight: bolder;
-        line-height: 1em;
-        color: var(--internal-or-live-chart-text-color);
-        flex: 0 0 auto;
-        padding: 10px 15px;
-        border-bottom: 1px solid var(--internal-or-live-chart-border-color);
-    }
-    
+
+
     .panel-title-text {
         flex: 1;
         text-transform: uppercase;
@@ -89,7 +82,7 @@ const style = css`
         text-overflow: ellipsis;
         overflow: hidden;
     }
-    
+
     .panel-content {
         display: flex;
         flex-direction: row;
@@ -97,7 +90,7 @@ const style = css`
         flex: 1;
         overflow: hidden;
     }
-    
+
     .current-value-wrapper {
         display: flex;
         align-items: center;
@@ -105,40 +98,40 @@ const style = css`
         padding: 10px;
         flex: 0 0 auto;
     }
-    
+
     .current-value-icon {
         font-size: 24px;
         margin-right: 10px;
         display: flex;
     }
-    
+
     .current-value-number {
         color: var(--internal-or-live-chart-text-color);
         font-size: 32px;
         font-weight: bold;
     }
-    
+
     .current-value-unit {
         color: var(--internal-or-live-chart-text-color);
         font-size: 24px;
         font-weight: 200;
         margin-left: 5px;
     }
-    
+
     .chart-container {
         flex: 1 1 0;
         position: relative;
         overflow: hidden;
         width: 100%;
     }
-    
+
     #chart {
         width: 100% !important;
         height: 100% !important;
         max-width: 100%;
         max-height: 100%;
     }
-    
+
     .controls-wrapper {
         display: flex;
         justify-content: space-between;
@@ -148,13 +141,13 @@ const style = css`
         border-top: 1px solid var(--internal-or-live-chart-border-color);
         gap: 10px;
     }
-    
+
     .control-group {
         display: flex;
         align-items: center;
         gap: 10px;
     }
-    
+
     .status-indicator {
         display: flex;
         align-items: center;
@@ -162,34 +155,40 @@ const style = css`
         color: var(--internal-or-live-chart-text-color);
         opacity: 0.7;
     }
-    
+
     .status-dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         margin-right: 5px;
     }
-    
+
     .status-dot.live {
         background-color: #4CAF50;
         box-shadow: 0 0 4px #4CAF50;
     }
-    
+
     .status-dot.loading {
         background-color: #FF9800;
         animation: pulse 2s infinite;
     }
-    
+
     .status-dot.error {
         background-color: #F44336;
     }
-    
+
     @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
+        0% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+        100% {
+            opacity: 1;
+        }
     }
-    
+
     .error-container {
         display: flex;
         justify-content: center;
@@ -198,7 +197,7 @@ const style = css`
         flex-direction: column;
         color: var(--internal-or-live-chart-text-color);
     }
-    
+
     .empty-state {
         display: flex;
         justify-content: center;
@@ -549,14 +548,14 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._chart = echarts.init(this._chartElem);
 
         const chartOptions: ECChartOption = {
-            animation: false,
-            backgroundColor: this._style.getPropertyValue("--internal-or-live-chart-background-color"),
+            animation: true,
+            //backgroundColor: this._style.getPropertyValue("--internal-or-live-chart-background-color"),
             grid: {
                 show: false,
                 left: 10,
                 right: 10,
                 top: 10,
-                bottom: 10,
+                bottom: 0,
                 containLabel: true
             },
             tooltip: {
@@ -753,39 +752,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     `)}
                 </div>
                 <div class="controls-wrapper">
-                    <div class="control-group">
-                        <!-- Timeframe Selection -->
-                        ${getContentWithMenuTemplate(
-                                html`<or-mwc-input .type="${InputType.BUTTON}" 
-                                                   label="${this.timeframe === '5minutes' ? '5 min' : this.timeframe === '30minutes' ? '30 min' : '1 hour'}"
-                                                   ?disabled="${this.disabled}"></or-mwc-input>`,
-                                [
-                                    {value: "5minutes", text: "5 minutes"},
-                                    {value: "30minutes", text: "30 minutes"},
-                                    {value: "1hour", text: "1 hour"}
-                                ],
-                                this.timeframe,
-                                (value: string | string[]) => {
-                                    this.timeframe = value as TimeframeOption;
-                                }
-                        )}
-
-                        <!-- Refresh Interval Selection -->
-                        ${getContentWithMenuTemplate(
-                                html`<or-mwc-input .type="${InputType.BUTTON}" 
-                                                   label="${this.refreshInterval === '1second' ? '1 sec' : '1 min'}"
-                                                   ?disabled="${this.disabled}"></or-mwc-input>`,
-                                [
-                                    {value: "1second", text: "1 second"},
-                                    {value: "1minute", text: "1 minute"}
-                                ],
-                                this.refreshInterval,
-                                (value: string | string[]) => {
-                                    this.refreshInterval = value as RefreshIntervalOption;
-                                }
-                        )}
-                    </div>
-
                     <div class="control-group">
                         <div class="status-indicator">
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
