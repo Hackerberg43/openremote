@@ -53,7 +53,7 @@ const style = css`
         --internal-or-live-chart-graph-line-color: var(--or-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
         
         width: 100%;
-        min-height: 400px;
+        min-height: 300px;
         height: 100%;
         display: block;
     }
@@ -128,7 +128,7 @@ const style = css`
     }
     
     .chart-container {
-        flex: 1;
+        flex: 1 1 0;
         position: relative;
         overflow: hidden;
         width: 100%;
@@ -138,6 +138,8 @@ const style = css`
     #chart {
         width: 100% !important;
         height: 100% !important;
+        max-width: 100%;
+        max-height: 100%;
     }
     
     .controls-wrapper {
@@ -239,7 +241,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _loading = false;
 
-    @state()
     protected _data: LiveChartDataPoint[] = [];
 
     @state()
@@ -254,7 +255,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _asset?: Asset;
 
-    @state()
     protected _lastEventTime?: number;
 
     @state()
@@ -267,6 +267,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _style!: CSSStyleDeclaration;
     protected _attributeEventSubscriptionId?: string;
     protected _resizeHandler?: () => void;
+    protected _containerResizeObserver?: ResizeObserver;
     protected _dataAbortController?: AbortController;
     protected _refreshTimer?: ReturnType<typeof setInterval>;
     protected _lastReceivedValue?: number;
@@ -542,7 +543,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 right: 10,
                 top: 10,
                 bottom: 10,
-                containLabel: false
+                containLabel: true
             },
             tooltip: {
                 trigger: "axis",
@@ -614,6 +615,19 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 }
             };
             window.addEventListener("resize", this._resizeHandler);
+            
+            // Add ResizeObserver to watch for container size changes
+            this._containerResizeObserver = new ResizeObserver(() => {
+                if (this._chart) {
+                    this._chart.resize();
+                }
+            });
+            
+            // Observe the chart container element
+            const chartContainer = this.shadowRoot?.querySelector('.chart-container') as HTMLElement;
+            if (chartContainer) {
+                this._containerResizeObserver.observe(chartContainer);
+            }
         }
     }
 
@@ -635,6 +649,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         if (this._resizeHandler) {
             window.removeEventListener("resize", this._resizeHandler);
             this._resizeHandler = undefined;
+        }
+
+        if (this._containerResizeObserver) {
+            this._containerResizeObserver.disconnect();
+            this._containerResizeObserver = undefined;
         }
 
         this._data = [];
