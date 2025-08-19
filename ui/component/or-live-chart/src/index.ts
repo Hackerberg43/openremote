@@ -78,6 +78,9 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
     @property({type: String})
     public status: StatusLevel = 'ok';
 
+    @property({type: String})
+    public unit?: string;
+
     render() {
         if (this.value === undefined || !this.icon) {
             return html``;
@@ -86,7 +89,7 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
         return html`
             <div class="attribute-indicator">
                 <or-icon class="attribute-icon ${this.status}" icon="${this.icon}"></or-icon>
-                <span class="attribute-value">${this.value}</span>
+                <span class="attribute-value">${this.value}${this.unit || ''}</span>
             </div>
         `;
     }
@@ -369,7 +372,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _isLive = false;
 
-    protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel}> = new Map();
+    protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel, unit?: string}> = new Map();
     protected _hasErrorStatus = false;
 
     @query("#chart")
@@ -629,6 +632,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         
         for (const attr of limitedAttributes) {
             try {
+                // Load asset information to get units
+                const assetResponse = await manager.rest.api.AssetResource.get(attr.assetId);
+                const asset = assetResponse.data;
+                
+                // Get current value
                 const currentValue: AttributeEvent = await manager.events!.sendEventWithReply({
                     eventType: "read-asset-attribute",
                     ref: {
@@ -637,9 +645,23 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     }
                 });
 
+                // Extract units from asset attribute
+                let units: string | undefined;
+                if (asset && asset.attributes) {
+                    const attribute = asset.attributes[attr.attributeName];
+                    if (attribute) {
+                        const attributeDescriptor = AssetModelUtil.getAttributeDescriptor(attribute.name!, asset.type!);
+                        units = Util.resolveUnits(Util.getAttributeUnits(attribute, attributeDescriptor, asset.type));
+                    }
+                }
+
                 const status = this._determineStatus(currentValue.value, attr.upperThreshold, attr.lowerThreshold);
                 const key = `${attr.assetId}_${attr.attributeName}`;
-                this._additionalAttributeValues.set(key, { value: currentValue.value, status });
+                this._additionalAttributeValues.set(key, { 
+                    value: currentValue.value, 
+                    status,
+                    unit: units 
+                });
 
                 // Subscribe to this attribute's events
                 this._subscribeToAdditionalAttribute(attr);
@@ -658,7 +680,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 const key = `${attr.assetId}_${attr.attributeName}`;
                 const attrData = this._additionalAttributeValues.get(key);
                 if (attrData) {
-                    this._updateAdditionalAttributeSubComponent(key, attrData.value, attrData.status);
+                    this._updateAdditionalAttributeSubComponent(key, attrData.value, attrData.status, attrData.unit);
                 }
             }
         });
@@ -722,13 +744,16 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    protected _updateAdditionalAttributeSubComponent(key: string, value: number, status: StatusLevel) {
+    protected _updateAdditionalAttributeSubComponent(key: string, value: number, status: StatusLevel, unit?: string) {
         // Find and update the sub-component directly by its properties
         // This is similar to how _currentValueElem is updated
         const subComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
         if (subComponent) {
             subComponent.value = value;
             subComponent.status = status;
+            if (unit !== undefined) {
+                subComponent.unit = unit;
+            }
         }
     }
 
@@ -772,13 +797,18 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         additionalAttr.lowerThreshold
                     );
                     
+                    // Get existing unit (preserve it from initial load)
+                    const existingData = this._additionalAttributeValues.get(key);
+                    const unit = existingData?.unit;
+                    
                     this._additionalAttributeValues.set(key, {
                         value: attributeEvent.value,
-                        status
+                        status,
+                        unit
                     });
                     
                     // Update sub-component directly without triggering re-render
-                    this._updateAdditionalAttributeSubComponent(key, attributeEvent.value, status);
+                    this._updateAdditionalAttributeSubComponent(key, attributeEvent.value, status, unit);
                     this._updateErrorStatus();
                 }
             }
@@ -1061,7 +1091,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             data-key="${key}"
                             .icon="${attr.icon}"
                             .value="${attrData?.value}"
-                            .status="${attrData?.status || 'ok'}">
+                            .status="${attrData?.status || 'ok'}"
+                            .unit="${attrData?.unit}">
                         </or-live-chart-additional-attribute>
                     `;
                 })}
