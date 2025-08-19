@@ -11,8 +11,8 @@
   },
   "types": "lib/index.d.ts",
   "scripts": {
-    "analyze": "npx cem analyze --config ../custom-elements-manifest.config.mjs",
-    "build": "npx tsc -b",
+    "analyze": "npm run build && npx cem analyze --config ../custom-elements-manifest.config.mjs",
+    "build": "npx tsc --build",
     "test": "echo \"No tests\" && exit 0",
     "prepack": "npx rspack"
   },
@@ -25,7 +25,7 @@
     "@openremote/or-icon": "workspace:*",
     "@openremote/or-mwc-components": "workspace:*",
     "@openremote/or-translate": "workspace:*",
-    "echarts": "^5.4.0",
+    "echarts": "^5.6.0",
     "lit": "^2.0.2",
     "moment": "^2.29.4"
   },

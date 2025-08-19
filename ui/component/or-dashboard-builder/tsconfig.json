@@ -10,6 +10,12 @@
   "references": [
     { "path": "../core" },
     { "path": "../rest" },
-    { "path": "../model" }
+    { "path": "../model" },
+    { "path": "../or-attribute-card" },
+    { "path": "../or-attribute-input" },
+    { "path": "../or-chart" },
+    { "path": "../or-gauge" },
+    { "path": "../or-live-chart" },
+    { "path": "../or-map" }
   ]
 }

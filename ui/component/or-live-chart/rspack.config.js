@@ -1,21 +1,18 @@
-const path = require("path");
+const util = require("@openremote/util");
 
-module.exports = {
-    entry: "./lib/index.js",
-    mode: "production",
-    devtool: "source-map",
-    module: {
-        rules: [
-            {
-                test: /\.s[ac]ss$/i,
-                use: ["lit-scss-loader", "sass-loader"],
-            },
-        ],
+bundles = {
+  "index": {
+    vendor: {
+      "chart.js": "Chart",
+      "jsonpath-plus": "JSONPath",
+      "moment": "moment"
     },
-    output: {
-        filename: "index.bundle.js",
-        path: path.resolve(__dirname, "dist", "umd"),
-        library: "or-live-chart",
-        libraryTarget: "umd"
-    }
+    excludeOr: true
+  },
+  "index.bundle": {
+    excludeOr: true,
+  },
+  "index.orbundle": undefined
 };
+
+module.exports = util.generateExports(__dirname);

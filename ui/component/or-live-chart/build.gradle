@@ -4,12 +4,15 @@ task clean() {
     doLast {
         delete "dist"
         delete "lib"
+        delete "tsconfig.tsbuildinfo"
     }
 }
 
 task installDist() {
     dependsOn npmAnalyze
 }
+
+npmAnalyze.dependsOn ':ui:component:or-mwc-components:npmAnalyze', ':ui:component:or-components:npmAnalyze', ':ui:component:or-icon:npmAnalyze', ':ui:component:or-translate:npmAnalyze'
 
 task prepareUi() {
     dependsOn clean, npmAnalyze, npmPrepare

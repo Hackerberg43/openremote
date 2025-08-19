@@ -53,6 +53,7 @@ const style = css`
         --internal-or-live-chart-graph-line-color: var(--or-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
         
         width: 100%;
+        min-height: 400px;
         height: 100%;
         display: block;
     }
@@ -274,13 +275,15 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     constructor() {
         super();
+        console.log('or-live-chart constructor called');
         this._updateTimeframeMs();
         this._updateRefreshIntervalMs();
     }
 
     connectedCallback() {
         super.connectedCallback();
-        this._style = window.getComputedStyle(this);
+        console.log('or-live-chart connectedCallback called');
+        this._style = window.getComputedStyle(this as unknown as Element);
         this.realm = this.realm || manager.getRealm();
     }
 
@@ -392,7 +395,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             interval: this._getIntervalString(),
             fromTimestamp: startTime,
             toTimestamp: endTime,
-            gapFill: true
+            gapFill: false
         };
 
         const response = await manager.rest.api.AssetDatapointResource.getDatapoints(
@@ -407,7 +410,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 x: dp.x!,
                 y: dp.y !== null && dp.y !== undefined ? dp.y : null
             }));
-
+            console.log("Data queried:", this._data);
             // Initialize chart if not already done
             if (!this._chart && this._chartElem) {
                 this._initializeChart();
@@ -470,11 +473,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             name: this.attributeName
         };
 
-        this.attributeRefs = [attributeRef];
+        (this as any).attributeRefs = [attributeRef];
     }
 
     protected _unsubscribeFromAttributeEvents() {
-        this.attributeRefs = undefined;
+        (this as any).attributeRefs = undefined;
     }
 
     // This method is called by the subscribe mixin when attribute events are received
@@ -565,7 +568,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             },
             yAxis: {
                 type: "value",
-                show: false,
+                show: true,
                 scale: true
             },
             series: []
@@ -650,6 +653,14 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     render() {
+        console.log('or-live-chart render called', {
+            assetId: this.assetId,
+            attributeName: this.attributeName,
+            loading: this._loading,
+            error: this._error,
+            data: this._data?.length
+        });
+
         if (!this.assetId || !this.attributeName) {
             return html`
                 <div class="panel">
@@ -686,12 +697,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         return html`
             <div class="panel">
-                <div class="panel-title">
-                    <span class="panel-title-text">
-                        ${this._asset?.name || ""} - ${this.attributeName || ""}
-                    </span>
-                </div>
-                
                 <div class="panel-content">
                     ${when(this._currentValue !== undefined, () => html`
                         <div class="current-value-wrapper">
@@ -757,3 +762,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         `;
     }
 }
+
+// Ensure component is available for import
+//declare global {
+//    interface HTMLElementTagNameMap {
+//        "or-live-chart": OrLiveChart;
+//    }
+//}
