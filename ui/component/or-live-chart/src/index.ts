@@ -17,6 +17,8 @@ import {
 import manager, {DefaultColor2, DefaultColor3, DefaultColor4, Util, subscribe} from "@openremote/core";
 import "@openremote/or-components/or-loading-indicator";
 import "@openremote/or-translate";
+import "@openremote/or-icon";
+import {OrIcon} from "@openremote/or-icon";
 import * as echarts from "echarts/core";
 import {LineChart, LineSeriesOption} from "echarts/charts";
 import {GridComponent, TooltipComponent, GridComponentOption, TooltipComponentOption} from "echarts/components";
@@ -97,6 +99,16 @@ export interface LiveChartDataPoint {
 
 export type TimeframeOption = "5minutes" | "30minutes" | "1hour";
 export type RefreshIntervalOption = "1second" | "1minute";
+
+export interface AdditionalAttribute {
+    assetId: string;
+    attributeName: string;
+    icon: string;
+    upperThreshold?: number;
+    lowerThreshold?: number;
+}
+
+export type StatusLevel = "ok" | "warning" | "error";
 
 // language=CSS
 const style = css`
@@ -208,6 +220,22 @@ const style = css`
         }
     }
 
+    @keyframes flash {
+        0% {
+            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(0, 255, 0, 0);
+        }
+        50% {
+            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(255, 0, 0, 0.5);
+        }
+        100% {
+            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(0, 255, 0, 0);
+        }
+    }
+
+    .panel.error {
+        animation: flash 1.5s infinite;
+    }
+
     .error-container {
         display: flex;
         justify-content: center;
@@ -225,6 +253,39 @@ const style = css`
         flex-direction: column;
         color: var(--internal-or-live-chart-text-color);
         opacity: 0.6;
+    }
+
+    .additional-attributes {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .attribute-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--internal-or-live-chart-text-color);
+        opacity: 0.8;
+    }
+
+    .attribute-icon {
+        --or-icon-fill: #4CAF50;
+        --or-icon-width: 14px;
+        --or-icon-height: 14px;
+    }
+
+    .attribute-icon.warning {
+        --or-icon-fill: #FF9800;
+    }
+
+    .attribute-icon.error {
+        --or-icon-fill: #F44336;
+    }
+
+    .attribute-value {
+        font-weight: 500;
     }
 `;
 
@@ -253,6 +314,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @property({type: String})
     public realm?: string;
 
+    @property({type: Array})
+    public additionalAttributes: AdditionalAttribute[] = [];
+
     @state()
     protected _loading = false;
 
@@ -270,6 +334,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _isLive = false;
 
+    @state()
+    protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel}> = new Map();
+
+    @state()
+    protected _hasErrorStatus = false;
+
     @query("#chart")
     protected _chartElem!: HTMLDivElement;
     
@@ -279,6 +349,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _chart?: echarts.ECharts;
     protected _style!: CSSStyleDeclaration;
     protected _attributeEventSubscriptionId?: string;
+    protected _additionalAttributeSubscriptions: Map<string, string> = new Map();
     protected _resizeHandler?: () => void;
     protected _containerResizeObserver?: ResizeObserver;
     protected _dataAbortController?: AbortController;
@@ -323,7 +394,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                           changedProperties.has("attributeName") || 
                           changedProperties.has("realm") ||
                           changedProperties.has("timeframe") ||
-                          changedProperties.has("refreshInterval");
+                          changedProperties.has("refreshInterval") ||
+                          changedProperties.has("additionalAttributes");
 
         if (reloadData) {
             this._cleanup();
@@ -383,6 +455,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
             // Subscribe to attribute events
             this._subscribeToAttributeEvents();
+
+            // Load and subscribe to additional attributes
+            this._loadAdditionalAttributes();
 
             // Start refresh timer for fixed interval updates
             this._startRefreshTimer();
@@ -509,10 +584,94 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         (this as any).attributeRefs = undefined;
     }
 
+    protected async _loadAdditionalAttributes() {
+        if (!this.additionalAttributes || this.additionalAttributes.length === 0) {
+            return;
+        }
+
+        // Limit to maximum 3 additional attributes
+        const limitedAttributes = this.additionalAttributes.slice(0, 3);
+        
+        for (const attr of limitedAttributes) {
+            try {
+                const currentValue: AttributeEvent = await manager.events!.sendEventWithReply({
+                    eventType: "read-asset-attribute",
+                    ref: {
+                        id: attr.assetId,
+                        name: attr.attributeName
+                    }
+                });
+
+                const status = this._determineStatus(currentValue.value, attr.upperThreshold, attr.lowerThreshold);
+                const key = `${attr.assetId}_${attr.attributeName}`;
+                this._additionalAttributeValues.set(key, { value: currentValue.value, status });
+
+                // Subscribe to this attribute's events
+                this._subscribeToAdditionalAttribute(attr);
+            } catch (ex) {
+                console.error(`Failed to load additional attribute ${attr.assetId}:${attr.attributeName}:`, ex);
+            }
+        }
+
+        // Update error status and trigger re-render
+        this._updateErrorStatus();
+        this.requestUpdate();
+    }
+
+    protected _subscribeToAdditionalAttribute(attr: AdditionalAttribute) {
+        if (!manager.events) return;
+
+        const key = `${attr.assetId}_${attr.attributeName}`;
+        const attributeRef: AttributeRef = {
+            id: attr.assetId,
+            name: attr.attributeName
+        };
+
+        // Add to the attributeRefs array for subscription
+        const currentRefs = (this as any).attributeRefs || [];
+        (this as any).attributeRefs = [...currentRefs, attributeRef];
+    }
+
+    protected _unsubscribeFromAdditionalAttributes() {
+        // Reset to only the main attribute
+        if (this.assetId && this.attributeName) {
+            (this as any).attributeRefs = [{
+                id: this.assetId,
+                name: this.attributeName
+            }];
+        } else {
+            (this as any).attributeRefs = undefined;
+        }
+        this._additionalAttributeSubscriptions.clear();
+    }
+
+    protected _determineStatus(value: number, upperThreshold?: number, lowerThreshold?: number): StatusLevel {
+        if (upperThreshold !== undefined && value > upperThreshold) {
+            return "error";
+        }
+        if (lowerThreshold !== undefined && value < lowerThreshold) {
+            return "error";
+        }
+        if (upperThreshold !== undefined && value > upperThreshold * 0.9) {
+            return "warning";
+        }
+        if (lowerThreshold !== undefined && value < lowerThreshold * 1.1) {
+            return "warning";
+        }
+        return "ok";
+    }
+
+    protected _updateErrorStatus() {
+        this._hasErrorStatus = Array.from(this._additionalAttributeValues.values())
+            .some(attr => attr.status === "error");
+    }
+
     // This method is called by the subscribe mixin when attribute events are received
     public _onEvent(event: any) {
         if (event.eventType === "attribute") {
             const attributeEvent = event as AttributeEvent;
+            
+            // Handle main attribute
             if (attributeEvent.ref?.id === this.assetId && attributeEvent.ref?.name === this.attributeName) {
                 this._lastEventTime = Date.now();
                 this._lastReceivedValue = attributeEvent.value;
@@ -530,6 +689,30 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             this._currentValueElem.unit = units;
                         }
                     }
+                }
+            }
+            
+            // Handle additional attributes
+            else {
+                const key = `${attributeEvent.ref?.id}_${attributeEvent.ref?.name}`;
+                const additionalAttr = this.additionalAttributes.find(
+                    attr => attr.assetId === attributeEvent.ref?.id && attr.attributeName === attributeEvent.ref?.name
+                );
+                
+                if (additionalAttr) {
+                    const status = this._determineStatus(
+                        attributeEvent.value,
+                        additionalAttr.upperThreshold,
+                        additionalAttr.lowerThreshold
+                    );
+                    
+                    this._additionalAttributeValues.set(key, {
+                        value: attributeEvent.value,
+                        status
+                    });
+                    
+                    this._updateErrorStatus();
+                    this.requestUpdate();
                 }
             }
         }
@@ -685,6 +868,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
 
         this._unsubscribeFromAttributeEvents();
+        this._unsubscribeFromAdditionalAttributes();
 
         if (this._chart) {
             this._chart.dispose();
@@ -711,6 +895,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._currentValueElem.value = undefined;
             this._currentValueElem.unit = undefined;
         }
+        
+        // Clear additional attribute values
+        this._additionalAttributeValues.clear();
+        this._hasErrorStatus = false;
     }
 
     protected _onTimeframeChanged(event: OrInputChangedEvent) {
@@ -765,7 +953,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
 
         return html`
-            <div class="panel">
+            <div class="panel ${this._hasErrorStatus ? 'error' : ''}">
                 <div class="panel-content">
                     <div class="chart-container">
                         <div id="chart"></div>
@@ -782,7 +970,36 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
                         </div>
                     </div>
+                    ${this._renderAdditionalAttributes()}
                 </div>
+            </div>
+        `;
+    }
+
+    protected _renderAdditionalAttributes() {
+        if (!this.additionalAttributes || this.additionalAttributes.length === 0) {
+            return html``;
+        }
+
+        const limitedAttributes = this.additionalAttributes.slice(0, 3);
+        
+        return html`
+            <div class="additional-attributes">
+                ${limitedAttributes.map(attr => {
+                    const key = `${attr.assetId}_${attr.attributeName}`;
+                    const attrData = this._additionalAttributeValues.get(key);
+                    
+                    if (!attrData) {
+                        return html``;
+                    }
+                    
+                    return html`
+                        <div class="attribute-indicator">
+                            <or-icon class="attribute-icon ${attrData.status}" icon="${attr.icon}"></or-icon>
+                            <span class="attribute-value">${attrData.value}</span>
+                        </div>
+                    `;
+                })}
             </div>
         `;
     }

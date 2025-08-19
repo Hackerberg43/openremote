@@ -116,6 +116,29 @@ export class KpiWidget extends OrAssetWidget {
                         attributeName="power"
                         timeframe="30minutes"
                         refreshInterval="1second"
+                        .additionalAttributes="${[
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'efficiencyExport',
+                                icon: 'thermometer',
+                                upperThreshold: 100,
+                                lowerThreshold: 30
+                            },
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'powerExportMax',
+                                icon: 'thermometer',
+                                upperThreshold: 100,
+                                lowerThreshold: 30
+                            },
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'efficiencyExport',
+                                icon: 'battery',
+                                upperThreshold: 100,
+                                lowerThreshold: 30
+                            }
+                        ]}"
                         style="height: 100%; width: 100%;">
                 </or-live-chart>
 
