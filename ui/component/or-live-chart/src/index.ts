@@ -197,8 +197,6 @@ const style = css`
         background: var(--internal-or-live-chart-background-color);
         border: 1px solid var(--internal-or-live-chart-border-color);
         border-radius: 25px;
-        box-shadow: inset 0 0 2px #000000,
-        0 0 60px rgba(0, 255, 0, 0)
     }
 
     .panel-content {
@@ -283,18 +281,18 @@ const style = css`
 
     @keyframes flash {
         0% {
-            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(0, 255, 0, 0);
+            border-color: var(--internal-or-live-chart-border-color);
         }
         50% {
-            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(255, 0, 0, 0.5);
+            border-color: rgba(244, 67, 54, 1);
         }
         100% {
-            box-shadow: inset 0 0 2px #000000, 0 0 60px rgba(0, 255, 0, 0);
+            border-color: var(--internal-or-live-chart-border-color);
         }
     }
 
     .panel.error {
-        animation: flash 1.5s infinite;
+        animation: flash 2.5s infinite;
     }
 
     .error-container {

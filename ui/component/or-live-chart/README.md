@@ -10,7 +10,7 @@ A real-time live chart component for OpenRemote that displays moving timeframe d
 - **Automatic data gap filling** when no attribute events are received
 - **Current value display** with asset icon and units
 - **Additional attribute indicators** up to 3 attributes with custom icons and threshold-based color coding
-- **Error state visualization** with flashing border when error thresholds are exceeded
+- **Error state visualization** with smooth flashing border and glow effect when error thresholds are exceeded
 - **Visual design** based on or-attribute-card layout
 - **ECharts integration** with smooth line charts and tooltips
 - **Live status indicator** showing connection state
