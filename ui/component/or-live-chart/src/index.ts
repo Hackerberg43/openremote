@@ -697,6 +697,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         return html`
             <div class="panel">
+
+                
                 <div class="panel-content">
                     ${when(this._currentValue !== undefined, () => html`
                         <div class="current-value-wrapper">

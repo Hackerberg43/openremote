@@ -8,6 +8,7 @@ import {Attribute, AttributeRef} from "@openremote/model";
 import {html, TemplateResult } from "lit";
 import {KpiSettings} from "../settings/kpi-settings";
 import "@openremote/or-attribute-card";
+import "@openremote/or-live-chart";
 
 export interface KpiWidgetConfig extends AssetWidgetConfig {
     period?: 'year' | 'month' | 'week' | 'day' | 'hour';
@@ -111,7 +112,7 @@ export class KpiWidget extends OrAssetWidget {
                     `;
                 })}
                 <or-live-chart
-                        assetId="47AzAoDCgyOIRa8gIRHwGn"
+                        assetId="5ydJLbMubRRyPnZMJEU97v"
                         attributeName="power"
                         timeframe="30minutes"
                         refreshInterval="1second"
