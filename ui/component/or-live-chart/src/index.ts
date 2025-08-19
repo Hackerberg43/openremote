@@ -31,68 +31,7 @@ import {getContentWithMenuTemplate} from "@openremote/or-mwc-components/or-mwc-m
 
 echarts.use([GridComponent, TooltipComponent, LineChart, CanvasRenderer]);
 
-// String Attribute Indicator Sub-component
-@customElement("or-live-chart-string-attribute")
-export class OrLiveChartStringAttribute extends LitElement {
-    
-    static get styles() {
-        return css`
-            :host {
-                display: contents;
-            }
-            .attribute-indicator {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                font-size: 11px;
-                color: var(--internal-or-live-chart-text-color, #333);
-                opacity: 0.8;
-            }
-            
-            .attribute-icon {
-                --or-icon-fill: #4CAF50;
-                --or-icon-width: 14px;
-                --or-icon-height: 14px;
-            }
-            
-            .attribute-icon.warning {
-                --or-icon-fill: #FF9800;
-            }
-            
-            .attribute-icon.error {
-                --or-icon-fill: #F44336;
-            }
-            
-            .attribute-value {
-                font-weight: 500;
-            }
-        `;
-    }
-
-    @property({type: String})
-    public icon?: string;
-
-    @property({type: String})
-    public value?: string;
-
-    @property({type: String})
-    public status: StatusLevel = 'ok';
-
-    render() {
-        if (this.value === undefined || !this.icon) {
-            return html``;
-        }
-        
-        return html`
-            <div class="attribute-indicator">
-                <or-icon class="attribute-icon ${this.status}" icon="${this.icon}"></or-icon>
-                <span class="attribute-value">${this.value}</span>
-            </div>
-        `;
-    }
-}
-
-// Numeric Additional Attribute Indicator Sub-component
+// Additional Attribute Indicator Sub-component
 @customElement("or-live-chart-additional-attribute")
 export class OrLiveChartAdditionalAttribute extends LitElement {
     
@@ -225,24 +164,13 @@ export interface LiveChartDataPoint {
 export type TimeframeOption = "5minutes" | "30minutes" | "1hour";
 export type RefreshIntervalOption = "1second" | "1minute";
 
-export interface NumericAdditionalAttribute {
+export interface AdditionalAttribute {
     assetId: string;
     attributeName: string;
     icon: string;
     upperThreshold?: number;
     lowerThreshold?: number;
 }
-
-export interface StringAdditionalAttribute {
-    assetId: string;
-    attributeName: string;
-    icon: string;
-    okValues?: string[];
-    warningValues?: string[];
-    errorValues?: string[];
-}
-
-export type AdditionalAttribute = NumericAdditionalAttribute | StringAdditionalAttribute;
 
 export type StatusLevel = "ok" | "warning" | "error";
 
@@ -298,44 +226,19 @@ const style = css`
     }
 
     .controls-wrapper {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: repeat(3, auto);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         padding: 10px 15px;
         flex: 0 0 auto;
         border-top: 1px solid var(--internal-or-live-chart-border-color);
-        gap: 8px;
-        align-items: center;
+        gap: 10px;
     }
 
     .control-group {
         display: flex;
         align-items: center;
         gap: 10px;
-    }
-
-    .status-indicator {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .string-attributes {
-        grid-column: 1;
-        grid-row: 2 / 4;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        align-items: flex-start;
-    }
-
-    .numeric-attributes {
-        grid-column: 2;
-        grid-row: 1 / 4;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        align-items: flex-end;
-        justify-self: end;
     }
 
     .status-indicator {
@@ -417,6 +320,11 @@ const style = css`
         opacity: 0.6;
     }
 
+    .additional-attributes {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 `;
 
 @customElement("or-live-chart")
@@ -447,12 +355,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @property({type: Array})
     public additionalAttributes: AdditionalAttribute[] = [];
 
-    @property({type: Array})
-    public numericAttributes: NumericAdditionalAttribute[] = [];
-
-    @property({type: Array})
-    public stringAttributes: StringAdditionalAttribute[] = [];
-
     @state()
     protected _loading = false;
 
@@ -470,7 +372,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _isLive = false;
 
-    protected _additionalAttributeValues: Map<string, {value: number | string, status: StatusLevel, unit?: string}> = new Map();
+    protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel, unit?: string}> = new Map();
     protected _hasErrorStatus = false;
 
     @query("#chart")
@@ -531,9 +433,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                           changedProperties.has("realm") ||
                           changedProperties.has("timeframe") ||
                           changedProperties.has("refreshInterval") ||
-                          changedProperties.has("additionalAttributes") ||
-                          changedProperties.has("numericAttributes") ||
-                          changedProperties.has("stringAttributes");
+                          changedProperties.has("additionalAttributes");
 
         if (reloadData) {
             this._cleanup();
@@ -723,14 +623,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected async _loadAdditionalAttributes() {
-        // Combine all attribute types and limit total to 6 (3 per column)
-        const allAttributes = [...this.additionalAttributes, ...this.numericAttributes, ...this.stringAttributes];
-        if (allAttributes.length === 0) {
+        if (!this.additionalAttributes || this.additionalAttributes.length === 0) {
             return;
         }
 
-        // Limit to maximum 6 total attributes (3 per column)
-        const limitedAttributes = allAttributes.slice(0, 6);
+        // Limit to maximum 3 additional attributes
+        const limitedAttributes = this.additionalAttributes.slice(0, 3);
         
         for (const attr of limitedAttributes) {
             try {
@@ -747,9 +645,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     }
                 });
 
-                // Extract units from asset attribute (only for numeric attributes)
+                // Extract units from asset attribute
                 let units: string | undefined;
-                if (asset && asset.attributes && this._isNumericAttribute(attr)) {
+                if (asset && asset.attributes) {
                     const attribute = asset.attributes[attr.attributeName];
                     if (attribute) {
                         const attributeDescriptor = AssetModelUtil.getAttributeDescriptor(attribute.name!, asset.type!);
@@ -757,14 +655,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     }
                 }
 
-                // Determine status based on attribute type
-                let status: StatusLevel;
-                if (this._isNumericAttribute(attr)) {
-                    status = this._determineStatus(currentValue.value as number, attr.upperThreshold, attr.lowerThreshold);
-                } else {
-                    status = this._determineStringStatus(currentValue.value as string, attr as StringAdditionalAttribute);
-                }
-
+                const status = this._determineStatus(currentValue.value, attr.upperThreshold, attr.lowerThreshold);
                 const key = `${attr.assetId}_${attr.attributeName}`;
                 this._additionalAttributeValues.set(key, { 
                     value: currentValue.value, 
@@ -838,28 +729,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return "ok";
     }
 
-    protected _determineStringStatus(value: string, attr: StringAdditionalAttribute): StatusLevel {
-        if (attr.errorValues?.includes(value)) {
-            return "error";
-        }
-        if (attr.warningValues?.includes(value)) {
-            return "warning";
-        }
-        if (attr.okValues?.includes(value)) {
-            return "ok";
-        }
-        // Default to ok if value doesn't match any specified values
-        return "ok";
-    }
-
-    protected _isNumericAttribute(attr: AdditionalAttribute): attr is NumericAdditionalAttribute {
-        return 'upperThreshold' in attr || 'lowerThreshold' in attr;
-    }
-
-    protected _isStringAttribute(attr: AdditionalAttribute): attr is StringAdditionalAttribute {
-        return 'okValues' in attr || 'warningValues' in attr || 'errorValues' in attr;
-    }
-
     protected _updateErrorStatus() {
         const hadError = this._hasErrorStatus;
         this._hasErrorStatus = Array.from(this._additionalAttributeValues.values())
@@ -875,23 +744,16 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    protected _updateAdditionalAttributeSubComponent(key: string, value: number | string, status: StatusLevel, unit?: string) {
-        // Try numeric component first
-        const numericComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
-        if (numericComponent && typeof value === 'number') {
-            numericComponent.value = value;
-            numericComponent.status = status;
+    protected _updateAdditionalAttributeSubComponent(key: string, value: number, status: StatusLevel, unit?: string) {
+        // Find and update the sub-component directly by its properties
+        // This is similar to how _currentValueElem is updated
+        const subComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
+        if (subComponent) {
+            subComponent.value = value;
+            subComponent.status = status;
             if (unit !== undefined) {
-                numericComponent.unit = unit;
+                subComponent.unit = unit;
             }
-            return;
-        }
-        
-        // Try string component
-        const stringComponent = this.shadowRoot?.querySelector(`or-live-chart-string-attribute[data-key="${key}"]`) as OrLiveChartStringAttribute;
-        if (stringComponent && typeof value === 'string') {
-            stringComponent.value = value;
-            stringComponent.status = status;
         }
     }
 
@@ -924,26 +786,16 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             // Handle additional attributes
             else {
                 const key = `${attributeEvent.ref?.id}_${attributeEvent.ref?.name}`;
-                const allAttributes = [...this.additionalAttributes, ...this.numericAttributes, ...this.stringAttributes];
-                const additionalAttr = allAttributes.find(
+                const additionalAttr = this.additionalAttributes.find(
                     attr => attr.assetId === attributeEvent.ref?.id && attr.attributeName === attributeEvent.ref?.name
                 );
                 
                 if (additionalAttr) {
-                    // Determine status based on attribute type
-                    let status: StatusLevel;
-                    if (this._isNumericAttribute(additionalAttr)) {
-                        status = this._determineStatus(
-                            attributeEvent.value as number,
-                            additionalAttr.upperThreshold,
-                            additionalAttr.lowerThreshold
-                        );
-                    } else {
-                        status = this._determineStringStatus(
-                            attributeEvent.value as string, 
-                            additionalAttr as StringAdditionalAttribute
-                        );
-                    }
+                    const status = this._determineStatus(
+                        attributeEvent.value,
+                        additionalAttr.upperThreshold,
+                        additionalAttr.lowerThreshold
+                    );
                     
                     // Get existing unit (preserve it from initial load)
                     const existingData = this._additionalAttributeValues.get(key);
@@ -1209,55 +1061,28 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     ></or-live-chart-current-value>
                 </div>
                 <div class="controls-wrapper">
-                    <div class="control-group status-indicator">
-                        <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
-                        <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
+                    <div class="control-group">
+                        <div class="status-indicator">
+                            <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
+                            <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
+                        </div>
                     </div>
-                    ${this._renderStringAttributes()}
-                    ${this._renderNumericAttributes()}
+                    ${this._renderAdditionalAttributes()}
                 </div>
             </div>
         `;
     }
 
-    protected _renderStringAttributes() {
-        const allAttributes = [...this.additionalAttributes, ...this.numericAttributes, ...this.stringAttributes];
-        const stringAttributes = allAttributes.filter(attr => this._isStringAttribute(attr)).slice(0, 3);
-        
-        if (stringAttributes.length === 0) {
+    protected _renderAdditionalAttributes() {
+        if (!this.additionalAttributes || this.additionalAttributes.length === 0) {
             return html``;
         }
-        
-        return html`
-            <div class="string-attributes">
-                ${stringAttributes.map(attr => {
-                    const key = `${attr.assetId}_${attr.attributeName}`;
-                    const attrData = this._additionalAttributeValues.get(key);
-                    
-                    return html`
-                        <or-live-chart-string-attribute 
-                            data-key="${key}"
-                            .icon="${attr.icon}"
-                            .value="${attrData?.value as string}"
-                            .status="${attrData?.status || 'ok'}">
-                        </or-live-chart-string-attribute>
-                    `;
-                })}
-            </div>
-        `;
-    }
 
-    protected _renderNumericAttributes() {
-        const allAttributes = [...this.additionalAttributes, ...this.numericAttributes, ...this.stringAttributes];
-        const numericAttributes = allAttributes.filter(attr => this._isNumericAttribute(attr)).slice(0, 3);
-        
-        if (numericAttributes.length === 0) {
-            return html``;
-        }
+        const limitedAttributes = this.additionalAttributes.slice(0, 3);
         
         return html`
-            <div class="numeric-attributes">
-                ${numericAttributes.map(attr => {
+            <div class="additional-attributes">
+                ${limitedAttributes.map(attr => {
                     const key = `${attr.assetId}_${attr.attributeName}`;
                     const attrData = this._additionalAttributeValues.get(key);
                     
@@ -1265,7 +1090,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         <or-live-chart-additional-attribute 
                             data-key="${key}"
                             .icon="${attr.icon}"
-                            .value="${attrData?.value as number}"
+                            .value="${attrData?.value}"
                             .status="${attrData?.status || 'ok'}"
                             .unit="${attrData?.unit}">
                         </or-live-chart-additional-attribute>
