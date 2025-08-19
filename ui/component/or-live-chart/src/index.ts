@@ -282,12 +282,15 @@ const style = css`
     @keyframes flash {
         0% {
             border-color: var(--internal-or-live-chart-border-color);
+            background-color: var(--internal-or-live-chart-background-color);
         }
         50% {
             border-color: rgba(244, 67, 54, 1);
+            background-color: rgba(244, 67, 54, 0.05);
         }
         100% {
             border-color: var(--internal-or-live-chart-border-color);
+            background-color: var(--internal-or-live-chart-background-color);
         }
     }
 
