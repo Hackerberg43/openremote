@@ -30,6 +30,69 @@ import {getContentWithMenuTemplate} from "@openremote/or-mwc-components/or-mwc-m
 
 echarts.use([GridComponent, TooltipComponent, LineChart, CanvasRenderer]);
 
+// Current Value Display Sub-component
+@customElement("or-live-chart-current-value")
+export class OrLiveChartCurrentValue extends LitElement {
+    
+    static get styles() {
+        return css`
+            :host {
+                display: contents;
+            }
+            .current-value-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px;
+                flex: 0 0 auto;
+            }
+            .current-value-icon {
+                font-size: 24px;
+                margin-right: 10px;
+                display: flex;
+            }
+            .current-value-number {
+                color: var(--internal-or-live-chart-text-color, #333);
+                font-size: 32px;
+                font-weight: bold;
+            }
+            .current-value-unit {
+                color: var(--internal-or-live-chart-text-color, #333);
+                font-size: 32px;
+                font-weight: 200;
+                margin-left: 5px;
+            }
+        `;
+    }
+
+    @property({type: Number})
+    public value?: number;
+
+    @property({type: String})
+    public unit?: string;
+
+    @property({type: Object})
+    public asset?: Asset;
+
+    render() {
+        if (this.value === undefined) return html``;
+        
+        return html`
+            <div class="current-value-wrapper">
+                ${this.asset ? html`
+                    <span class="current-value-icon">
+                        ${getAssetDescriptorIconTemplate(AssetModelUtil.getAssetDescriptor(this.asset.type!))}
+                    </span>
+                ` : ''}
+                <span class="current-value-number">${this.value}</span>
+                ${this.unit ? html`
+                    <span class="current-value-unit">${this.unit}</span>
+                ` : ''}
+            </div>
+        `;
+    }
+}
+
 export type ECChartOption = echarts.ComposeOption<
     | LineSeriesOption
     | TooltipComponentOption
@@ -74,15 +137,6 @@ const style = css`
         0 0 60px rgba(0, 255, 0, 0)
     }
 
-
-    .panel-title-text {
-        flex: 1;
-        text-transform: uppercase;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-
     .panel-content {
         display: flex;
         flex-direction: row;
@@ -91,32 +145,6 @@ const style = css`
         overflow: hidden;
     }
 
-    .current-value-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px;
-        flex: 0 0 auto;
-    }
-
-    .current-value-icon {
-        font-size: 24px;
-        margin-right: 10px;
-        display: flex;
-    }
-
-    .current-value-number {
-        color: var(--internal-or-live-chart-text-color);
-        font-size: 32px;
-        font-weight: bold;
-    }
-
-    .current-value-unit {
-        color: var(--internal-or-live-chart-text-color);
-        font-size: 24px;
-        font-weight: 200;
-        margin-left: 5px;
-    }
 
     .chart-container {
         flex: 1 1 0;
@@ -239,11 +267,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _data: LiveChartDataPoint[] = [];
 
-    @state()
-    protected _currentValue?: number;
-
-    @state()
-    protected _currentUnit?: string;
 
     @state()
     protected _error?: string;
@@ -258,6 +281,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     @query("#chart")
     protected _chartElem!: HTMLDivElement;
+    
+    @query("or-live-chart-current-value")
+    protected _currentValueElem?: OrLiveChartCurrentValue;
 
     protected _chart?: echarts.ECharts;
     protected _style!: CSSStyleDeclaration;
@@ -289,21 +315,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     disconnectedCallback() {
         super.disconnectedCallback();
         this._cleanup();
-    }
-
-    shouldUpdate(changedProperties: PropertyValues): boolean {
-        // Allow current value updates to render, but prevent other frequent updates
-        if (changedProperties.size === 1) {
-            const singleChange = Array.from(changedProperties.keys())[0] as string;
-            if (singleChange === '_currentValue') {
-                return true; // Allow current value updates
-            }
-            if (singleChange === '_data' || singleChange === '_lastEventTime') {
-                return false; // Block data/timing only updates
-            }
-        }
-        
-        return true; // Allow all other updates (loading, error, config changes, etc.)
     }
 
     updated(changedProperties: PropertyValues) {
@@ -458,17 +469,30 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 }
             });
 
-            this._currentValue = currentValue.value;
             this._lastReceivedValue = currentValue.value;
 
             // Get units from asset attribute
+            let units: string | undefined;
             if (this._asset && this._asset.attributes) {
                 const attr = this._asset.attributes[this.attributeName];
                 if (attr) {
                     const attributeDescriptor = AssetModelUtil.getAttributeDescriptor(attr.name!, this._asset.type!);
-                    const units = Util.resolveUnits(Util.getAttributeUnits(attr, attributeDescriptor, this._asset.type));
-                    this._currentUnit = units;
+                    units = Util.resolveUnits(Util.getAttributeUnits(attr, attributeDescriptor, this._asset.type));
                 }
+            }
+
+            // Update the current value sub-component
+            if (this._currentValueElem) {
+                this._currentValueElem.value = currentValue.value;
+                this._currentValueElem.unit = units;
+            } else {
+                // If sub-component isn't ready yet, wait for next update cycle
+                this.updateComplete.then(() => {
+                    if (this._currentValueElem) {
+                        this._currentValueElem.value = currentValue.value;
+                        this._currentValueElem.unit = units;
+                    }
+                });
             }
         } catch (ex) {
             console.error("Failed to get current value:", ex);
@@ -501,7 +525,21 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             if (attributeEvent.ref?.id === this.assetId && attributeEvent.ref?.name === this.attributeName) {
                 this._lastEventTime = Date.now();
                 this._lastReceivedValue = attributeEvent.value;
-                this._currentValue = attributeEvent.value;
+                
+                // Update the current value sub-component directly
+                if (this._currentValueElem) {
+                    this._currentValueElem.value = attributeEvent.value;
+                    
+                    // Ensure unit is set if it wasn't already
+                    if (!this._currentValueElem.unit && this._asset && this._asset.attributes && this.attributeName) {
+                        const attr = this._asset.attributes[this.attributeName];
+                        if (attr) {
+                            const attributeDescriptor = AssetModelUtil.getAttributeDescriptor(attr.name!, this._asset.type!);
+                            const units = Util.resolveUnits(Util.getAttributeUnits(attr, attributeDescriptor, this._asset.type));
+                            this._currentValueElem.unit = units;
+                        }
+                    }
+                }
             }
         }
     }
@@ -569,7 +607,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         const point = params[0];
                         const time = moment(point.axisValue).format("HH:mm:ss");
                         const value = point.value[1];
-                        const unit = this._currentUnit || "";
+                        const unit = this._currentValueElem?.unit || "";
                         return `${time}<br/><strong>${value}${unit}</strong>`;
                     }
                     return "";
@@ -673,10 +711,15 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
 
         this._data = [];
-        this._currentValue = undefined;
         this._lastReceivedValue = undefined;
         this._lastEventTime = undefined;
         this._isLive = false;
+        
+        // Clear the current value sub-component
+        if (this._currentValueElem) {
+            this._currentValueElem.value = undefined;
+            this._currentValueElem.unit = undefined;
+        }
     }
 
     protected _onTimeframeChanged(event: OrInputChangedEvent) {
@@ -737,19 +780,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         <div id="chart"></div>
                     </div>
                     
-                    ${when(this._currentValue !== undefined, () => html`
-                        <div class="current-value-wrapper">
-                            ${this._asset ? html`
-                                <span class="current-value-icon">
-                                    ${getAssetDescriptorIconTemplate(AssetModelUtil.getAssetDescriptor(this._asset!.type!))}
-                                </span>
-                            ` : ''}
-                            <span class="current-value-number">${this._currentValue}</span>
-                            ${this._currentUnit ? html`
-                                <span class="current-value-unit">${this._currentUnit}</span>
-                            ` : ''}
-                        </div>
-                    `)}
+                    <or-live-chart-current-value 
+                        .asset="${this._asset}"
+                    ></or-live-chart-current-value>
                 </div>
                 <div class="controls-wrapper">
                     <div class="control-group">
