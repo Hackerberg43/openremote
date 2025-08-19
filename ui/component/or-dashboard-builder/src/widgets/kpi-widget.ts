@@ -133,7 +133,7 @@ export class KpiWidget extends OrAssetWidget {
                             },
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'efficiencyExport',
+                                attributeName: 'energyExportTotal',
                                 icon: 'battery',
                                 upperThreshold: 100,
                                 lowerThreshold: 30

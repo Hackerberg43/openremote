@@ -31,6 +31,67 @@ import {getContentWithMenuTemplate} from "@openremote/or-mwc-components/or-mwc-m
 
 echarts.use([GridComponent, TooltipComponent, LineChart, CanvasRenderer]);
 
+// Additional Attribute Indicator Sub-component
+@customElement("or-live-chart-additional-attribute")
+export class OrLiveChartAdditionalAttribute extends LitElement {
+    
+    static get styles() {
+        return css`
+            :host {
+                display: contents;
+            }
+            .attribute-indicator {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 11px;
+                color: var(--internal-or-live-chart-text-color, #333);
+                opacity: 0.8;
+            }
+            
+            .attribute-icon {
+                --or-icon-fill: #4CAF50;
+                --or-icon-width: 14px;
+                --or-icon-height: 14px;
+            }
+            
+            .attribute-icon.warning {
+                --or-icon-fill: #FF9800;
+            }
+            
+            .attribute-icon.error {
+                --or-icon-fill: #F44336;
+            }
+            
+            .attribute-value {
+                font-weight: 500;
+            }
+        `;
+    }
+
+    @property({type: String})
+    public icon?: string;
+
+    @property({type: Number})
+    public value?: number;
+
+    @property({type: String})
+    public status: StatusLevel = 'ok';
+
+    render() {
+        if (this.value === undefined || !this.icon) {
+            return html``;
+        }
+        
+        return html`
+            <div class="attribute-indicator">
+                <or-icon class="attribute-icon ${this.status}" icon="${this.icon}"></or-icon>
+                <span class="attribute-value">${this.value}</span>
+            </div>
+        `;
+    }
+}
+
 // Current Value Display Sub-component
 @customElement("or-live-chart-current-value")
 export class OrLiveChartCurrentValue extends LitElement {
@@ -260,33 +321,6 @@ const style = css`
         align-items: center;
         gap: 8px;
     }
-
-    .attribute-indicator {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        color: var(--internal-or-live-chart-text-color);
-        opacity: 0.8;
-    }
-
-    .attribute-icon {
-        --or-icon-fill: #4CAF50;
-        --or-icon-width: 14px;
-        --or-icon-height: 14px;
-    }
-
-    .attribute-icon.warning {
-        --or-icon-fill: #FF9800;
-    }
-
-    .attribute-icon.error {
-        --or-icon-fill: #F44336;
-    }
-
-    .attribute-value {
-        font-weight: 500;
-    }
 `;
 
 @customElement("or-live-chart")
@@ -334,10 +368,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _isLive = false;
 
-    @state()
     protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel}> = new Map();
-
-    @state()
     protected _hasErrorStatus = false;
 
     @query("#chart")
@@ -345,6 +376,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     
     @query("or-live-chart-current-value")
     protected _currentValueElem?: OrLiveChartCurrentValue;
+
+    @query(".panel")
+    protected _panelElem?: HTMLDivElement;
 
     protected _chart?: echarts.ECharts;
     protected _style!: CSSStyleDeclaration;
@@ -613,9 +647,20 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             }
         }
 
-        // Update error status and trigger re-render
+        // Update error status but don't trigger re-render
+        // The initial render will show the correct state
         this._updateErrorStatus();
-        this.requestUpdate();
+        
+        // Wait for next update cycle to ensure DOM is ready, then update sub-components
+        this.updateComplete.then(() => {
+            for (const attr of limitedAttributes) {
+                const key = `${attr.assetId}_${attr.attributeName}`;
+                const attrData = this._additionalAttributeValues.get(key);
+                if (attrData) {
+                    this._updateAdditionalAttributeSubComponent(key, attrData.value, attrData.status);
+                }
+            }
+        });
     }
 
     protected _subscribeToAdditionalAttribute(attr: AdditionalAttribute) {
@@ -662,8 +707,28 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _updateErrorStatus() {
+        const hadError = this._hasErrorStatus;
         this._hasErrorStatus = Array.from(this._additionalAttributeValues.values())
             .some(attr => attr.status === "error");
+        
+        // Update panel class directly - this is safe since panel is a top-level element
+        if (hadError !== this._hasErrorStatus && this._panelElem) {
+            if (this._hasErrorStatus) {
+                this._panelElem.classList.add('error');
+            } else {
+                this._panelElem.classList.remove('error');
+            }
+        }
+    }
+
+    protected _updateAdditionalAttributeSubComponent(key: string, value: number, status: StatusLevel) {
+        // Find and update the sub-component directly by its properties
+        // This is similar to how _currentValueElem is updated
+        const subComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
+        if (subComponent) {
+            subComponent.value = value;
+            subComponent.status = status;
+        }
     }
 
     // This method is called by the subscribe mixin when attribute events are received
@@ -711,8 +776,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         status
                     });
                     
+                    // Update sub-component directly without triggering re-render
+                    this._updateAdditionalAttributeSubComponent(key, attributeEvent.value, status);
                     this._updateErrorStatus();
-                    this.requestUpdate();
                 }
             }
         }
@@ -989,15 +1055,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     const key = `${attr.assetId}_${attr.attributeName}`;
                     const attrData = this._additionalAttributeValues.get(key);
                     
-                    if (!attrData) {
-                        return html``;
-                    }
-                    
                     return html`
-                        <div class="attribute-indicator">
-                            <or-icon class="attribute-icon ${attrData.status}" icon="${attr.icon}"></or-icon>
-                            <span class="attribute-value">${attrData.value}</span>
-                        </div>
+                        <or-live-chart-additional-attribute 
+                            data-key="${key}"
+                            .icon="${attr.icon}"
+                            .value="${attrData?.value}"
+                            .status="${attrData?.status || 'ok'}">
+                        </or-live-chart-additional-attribute>
                     `;
                 })}
             </div>

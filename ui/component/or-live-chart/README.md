@@ -98,7 +98,7 @@ A real-time live chart component for OpenRemote that displays moving timeframe d
    - The previous value if no events received within the interval (gap filling)
    - Only the last event if multiple events received within the interval
 4. **Moving Window**: Maintains a sliding time window, removing old data points as new ones are added
-5. **Additional Attributes**: Monitors up to 3 additional attributes with real-time threshold checking and status indicators
+5. **Additional Attributes**: Monitors up to 3 additional attributes with real-time threshold checking and status indicators using dedicated sub-components for optimal performance
 
 ## Data Flow
 
