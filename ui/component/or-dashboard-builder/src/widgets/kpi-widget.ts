@@ -114,20 +114,21 @@ export class KpiWidget extends OrAssetWidget {
                 <or-live-chart
                         assetId="5ydJLbMubRRyPnZMJEU97v"
                         attributeName="power"
-                        timeframe="30minutes"
+                        timeframe="5minutes"
                         refreshInterval="1second"
+                        statusMessage="Error: Temperature approaching threshold"
                         .additionalAttributes="${[
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'efficiencyExport',
+                                attributeName: 'temperature',
                                 icon: 'thermometer',
-                                upperThreshold: 100,
-                                lowerThreshold: 30
+                                upperThreshold: 50,
+                                lowerThreshold: 45
                             },
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'powerExportMax',
-                                icon: 'thermometer',
+                                attributeName: 'efficiencyExport',
+                                icon: 'battery',
                                 upperThreshold: 100,
                                 lowerThreshold: 30
                             },

@@ -171,7 +171,7 @@ export interface AdditionalAttribute {
     lowerThreshold?: number;
 }
 
-export type StatusLevel = "ok" | "warning" | "error";
+export type StatusLevel = "ok" | "info" | "warning" | "error";
 
 // language=CSS
 const style = css`
@@ -236,7 +236,7 @@ const style = css`
 
     .main-group {
         display: flex;
-        align-items: start;
+        align-items: end;
         padding-left: 5px;
         padding-top: 20px;
         flex-direction: column;
@@ -290,7 +290,7 @@ const style = css`
         }
         50% {
             border-color: rgba(244, 67, 54, 1);
-            background-color: rgba(244, 67, 54, 0.05);
+            background-color: rgba(244, 67, 54, 0.1);
         }
         100% {
             border-color: var(--internal-or-live-chart-border-color);
@@ -327,6 +327,70 @@ const style = css`
         gap: 8px;
         justify-content: flex-end;
     }
+
+    .status-message-container {
+        display: flex;
+        align-items: center;
+        margin-top: 8px;
+        position: relative;
+    }
+
+    .status-message-icon {
+        --or-icon-width: 32px;
+        --or-icon-height: 32px;
+        cursor: help;
+        position: relative;
+    }
+
+    .status-message-icon.info {
+        --or-icon-fill: rgba(33, 150, 243, 0.5);
+    }
+
+    .status-message-icon.warning {
+        --or-icon-fill: #FF9800;
+    }
+
+    .status-message-icon.error {
+        --or-icon-fill: #F44336;
+    }
+
+    .status-message-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        max-width: 300px;
+        word-wrap: break-word;
+        white-space: normal;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        margin-bottom: 5px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+    }
+
+    .status-message-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: rgba(0, 0, 0, 0.9);
+    }
+
+    .status-message-icon:hover .status-message-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
 `;
 
 @customElement("or-live-chart")
@@ -357,6 +421,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @property({type: Array})
     public additionalAttributes: AdditionalAttribute[] = [];
 
+    @property({type: String})
+    public statusMessage?: string;
+
     @state()
     protected _loading = false;
 
@@ -376,6 +443,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel, unit?: string}> = new Map();
     protected _hasErrorStatus = false;
+    protected _messageErrorStatus = false;
 
     @query("#chart")
     protected _chartElem!: HTMLDivElement;
@@ -436,6 +504,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                           changedProperties.has("timeframe") ||
                           changedProperties.has("refreshInterval") ||
                           changedProperties.has("additionalAttributes");
+                          
+        if (changedProperties.has("statusMessage")) {
+            this._updateErrorStatus();
+        }
 
         if (reloadData) {
             this._cleanup();
@@ -503,6 +575,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._startRefreshTimer();
 
             this._isLive = true;
+            this._updateErrorStatus();
 
         } catch (ex) {
             console.error("Failed to load data:", ex);
@@ -731,10 +804,42 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return "ok";
     }
 
+    protected _determineMessageStatus(message?: string): StatusLevel {
+        if (!message) return "ok";
+        
+        const lowerMessage = message.toLowerCase();
+        
+        if (lowerMessage.includes("error") || lowerMessage.includes("critical") || lowerMessage.includes("failed") || lowerMessage.includes("fault")) {
+            return "error";
+        }
+        if (lowerMessage.includes("warning") || lowerMessage.includes("warn") || lowerMessage.includes("caution") || lowerMessage.includes("alert")) {
+            return "warning";
+        }
+        if (lowerMessage.includes("info") || lowerMessage.includes("notice") || lowerMessage.includes("ok") || lowerMessage.includes("normal")) {
+            return "info";
+        }
+        
+        return "info";
+    }
+
+    protected _getStatusIcon(status: StatusLevel): string {
+        switch (status) {
+            case "error":
+                return "alert-circle";
+            case "warning":
+                return "alert";
+            case "info":
+            default:
+                return "information";
+        }
+    }
+
     protected _updateErrorStatus() {
         const hadError = this._hasErrorStatus;
-        this._hasErrorStatus = Array.from(this._additionalAttributeValues.values())
+        const additionalAttributeError = Array.from(this._additionalAttributeValues.values())
             .some(attr => attr.status === "error");
+        this._messageErrorStatus = this._determineMessageStatus(this.statusMessage) === "error";
+        this._hasErrorStatus = additionalAttributeError || this._messageErrorStatus;
         
         // Update panel class directly - this is safe since panel is a top-level element
         if (hadError !== this._hasErrorStatus && this._panelElem) {
@@ -998,6 +1103,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         // Clear additional attribute values
         this._additionalAttributeValues.clear();
         this._hasErrorStatus = false;
+        this._messageErrorStatus = false;
+        
+        // Update panel class if needed
+        if (this._panelElem) {
+            this._panelElem.classList.remove('error');
+        }
     }
 
     protected _onTimeframeChanged(event: OrInputChangedEvent) {
@@ -1065,6 +1176,17 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     <or-live-chart-current-value 
                         .asset="${this._asset}"
                     ></or-live-chart-current-value>
+                    ${this.statusMessage ? html`
+                        <div class="status-message-container">
+                            <or-icon 
+                                class="status-message-icon ${this._determineMessageStatus(this.statusMessage)}" 
+                                icon="${this._getStatusIcon(this._determineMessageStatus(this.statusMessage))}">
+                                <div class="status-message-tooltip">
+                                    ${this.statusMessage}
+                                </div>
+                            </or-icon>
+                        </div>
+                    ` : ''}
                     </div>
                 </div>
                 <div class="additional-attributes-wrapper">
