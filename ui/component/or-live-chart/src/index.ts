@@ -333,13 +333,12 @@ const style = css`
         align-items: center;
         margin-top: 8px;
         position: relative;
+        cursor: help;
     }
 
     .status-message-icon {
         --or-icon-width: 32px;
         --or-icon-height: 32px;
-        cursor: help;
-        position: relative;
     }
 
     .status-message-icon.info {
@@ -355,39 +354,24 @@ const style = css`
     }
 
     .status-message-tooltip {
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
+        position: fixed;
+        background: var(--internal-or-live-chart-background-color);
+        color: var(--internal-or-live-chart-text-color);
         padding: 8px 12px;
         border-radius: 6px;
-        font-size: 12px;
-        white-space: nowrap;
+        font-size: 20px;
+        white-space: normal;
         max-width: 300px;
         word-wrap: break-word;
-        white-space: normal;
-        z-index: 1000;
+        z-index: 9999;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s, visibility 0.2s;
-        margin-bottom: 5px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         pointer-events: none;
     }
 
-    .status-message-tooltip::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: rgba(0, 0, 0, 0.9);
-    }
-
-    .status-message-icon:hover .status-message-tooltip {
+    .status-message-container:hover .status-message-tooltip {
         opacity: 1;
         visibility: visible;
     }
@@ -467,6 +451,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _refreshIntervalMs: number = 60 * 1000; // 1 minute default
     protected _mouseEnterHandler?: any;
     protected _mouseLeaveHandler?: any;
+    protected _tooltipMouseEnterHandler?: any;
+    protected _tooltipMouseLeaveHandler?: any;
 
     constructor() {
         super();
@@ -516,6 +502,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             }
         } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem) {
             this._initializeChart();
+        }
+        
+        // Setup tooltip positioning after any render
+        if (this.statusMessage && this._determineMessageStatus(this.statusMessage)) {
+            this.updateComplete.then(() => {
+                this._setupTooltipEventListeners();
+            });
         }
     }
 
@@ -1012,6 +1005,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._setupResizeHandler();
         // eventlisteners
         this._toggleChartEventListeners(true);
+        this._setupTooltipEventListeners();
     }
 
     protected _updateChart() {
@@ -1088,6 +1082,8 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._containerResizeObserver.disconnect();
             this._containerResizeObserver = undefined;
         }
+
+        this._removeTooltipEventListeners();
 
         this._data = [];
         this._lastReceivedValue = undefined;
@@ -1181,10 +1177,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             <or-icon 
                                 class="status-message-icon ${this._determineMessageStatus(this.statusMessage)}" 
                                 icon="${this._getStatusIcon(this._determineMessageStatus(this.statusMessage)!)}">
-                                <div class="status-message-tooltip">
-                                    ${this.statusMessage}
-                                </div>
                             </or-icon>
+                            <div class="status-message-tooltip">
+                                ${this.statusMessage}
+                            </div>
                         </div>
                     ` : ''}
                     </div>
@@ -1241,6 +1237,28 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._chartElem?.removeEventListener('mouseenter', this._mouseEnterHandler);
             this._chartElem?.removeEventListener('mouseleave', this._mouseLeaveHandler);
 
+        }
+    }
+
+    protected _setupTooltipEventListeners() {
+        const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
+        const tooltip = this.shadowRoot?.querySelector('.status-message-tooltip') as HTMLElement;
+        
+        if (container && tooltip) {
+            this._tooltipMouseEnterHandler = (e: MouseEvent) => {
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = `${rect.right - 250}px`; // Position from right edge, accounting for tooltip width
+                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`; // Position above icon
+            };
+            
+            container.addEventListener('mouseenter', this._tooltipMouseEnterHandler);
+        }
+    }
+
+    protected _removeTooltipEventListeners() {
+        const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
+        if (container && this._tooltipMouseEnterHandler) {
+            container.removeEventListener('mouseenter', this._tooltipMouseEnterHandler);
         }
     }
 }

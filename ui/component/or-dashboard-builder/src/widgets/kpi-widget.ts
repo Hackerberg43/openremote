@@ -116,7 +116,7 @@ export class KpiWidget extends OrAssetWidget {
                         attributeName="power"
                         timeframe="5minutes"
                         refreshInterval="1second"
-                        statusMessage="Info: Temperature approaching threshold"
+                        statusMessage="Info: Temperature approaching threshold and this is a very long message with so much content it should not even be readible by a human user because it is cutoff by this box"
                         .additionalAttributes="${[
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',
