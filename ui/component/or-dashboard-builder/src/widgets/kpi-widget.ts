@@ -116,7 +116,7 @@ export class KpiWidget extends OrAssetWidget {
                         attributeName="power"
                         timeframe="5minutes"
                         refreshInterval="1second"
-                        statusMessage="Error: Temperature approaching threshold"
+                        statusMessage="Info: Temperature approaching threshold"
                         .additionalAttributes="${[
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',

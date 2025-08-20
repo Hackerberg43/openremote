@@ -804,22 +804,22 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return "ok";
     }
 
-    protected _determineMessageStatus(message?: string): StatusLevel {
-        if (!message) return "ok";
+    protected _determineMessageStatus(message?: string): StatusLevel | null {
+        if (!message) return null;
         
         const lowerMessage = message.toLowerCase();
         
-        if (lowerMessage.includes("error") || lowerMessage.includes("critical") || lowerMessage.includes("failed") || lowerMessage.includes("fault")) {
+        if (lowerMessage.includes("error")) {
             return "error";
         }
-        if (lowerMessage.includes("warning") || lowerMessage.includes("warn") || lowerMessage.includes("caution") || lowerMessage.includes("alert")) {
+        if (lowerMessage.includes("warning")) {
             return "warning";
         }
-        if (lowerMessage.includes("info") || lowerMessage.includes("notice") || lowerMessage.includes("ok") || lowerMessage.includes("normal")) {
+        if (lowerMessage.includes("info")) {
             return "info";
         }
         
-        return "info";
+        return null;
     }
 
     protected _getStatusIcon(status: StatusLevel): string {
@@ -1176,11 +1176,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     <or-live-chart-current-value 
                         .asset="${this._asset}"
                     ></or-live-chart-current-value>
-                    ${this.statusMessage ? html`
+                    ${this.statusMessage && this._determineMessageStatus(this.statusMessage) ? html`
                         <div class="status-message-container">
                             <or-icon 
                                 class="status-message-icon ${this._determineMessageStatus(this.statusMessage)}" 
-                                icon="${this._getStatusIcon(this._determineMessageStatus(this.statusMessage))}">
+                                icon="${this._getStatusIcon(this._determineMessageStatus(this.statusMessage)!)}">
                                 <div class="status-message-tooltip">
                                     ${this.statusMessage}
                                 </div>
