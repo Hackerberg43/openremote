@@ -72,8 +72,8 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
     @property({type: String})
     public icon?: string;
 
-    @property({type: Number})
-    public value?: number;
+    @property()
+    public value?: number | string;
 
     @property({type: String})
     public status: StatusLevel = 'ok';
@@ -82,14 +82,16 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
     public unit?: string;
 
     render() {
-        if (this.value === undefined || !this.icon) {
+        if (!this.icon) {
             return html``;
         }
+        
+        const displayValue = this.value !== undefined ? this.value : '--';
         
         return html`
             <div class="attribute-indicator">
                 <or-icon class="attribute-icon ${this.status}" icon="${this.icon}"></or-icon>
-                <span class="attribute-value">${this.value}${this.unit || ''}</span>
+                <span class="attribute-value">${displayValue}${typeof this.value === 'string' ? '' : (this.unit || '')}</span>
             </div>
         `;
     }
@@ -427,7 +429,6 @@ const style = css`
     }
 
     .tooltip-label {
-        font-weight: bold;
         margin-right: 16px;
     }
 
@@ -436,6 +437,10 @@ const style = css`
         display: flex;
         align-items: center;
         justify-content: flex-end;
+    }
+
+    .attr-unit {
+        font-weight: normal;
     }
 
     .status-message-container:hover .status-message-tooltip {
@@ -475,7 +480,7 @@ const style = css`
         border-radius: 6px;
         font-size: 14px;
         white-space: normal;
-        max-width: 300px;
+        width: 300px;
         word-wrap: break-word;
         z-index: 9999;
         opacity: 0;
@@ -548,7 +553,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @state()
     protected _isLive = false;
 
-    protected _additionalAttributeValues: Map<string, {value: number, status: StatusLevel, unit?: string}> = new Map();
+    protected _additionalAttributeValues: Map<string, {value: number | string, status: StatusLevel, unit?: string}> = new Map();
     protected _hasErrorStatus = false;
     protected _messageErrorStatus = false;
 
@@ -860,20 +865,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             }
         }
 
-        // Update error status but don't trigger re-render
-        // The initial render will show the correct state
+        // Update error status and trigger re-render to show the loaded data
         this._updateErrorStatus();
-        
-        // Wait for next update cycle to ensure DOM is ready, then update sub-components
-        this.updateComplete.then(() => {
-            for (const attr of allAttributes) {
-                const key = `${attr.assetId}_${attr.attributeName}`;
-                const attrData = this._additionalAttributeValues.get(key);
-                if (attrData) {
-                    this._updateAdditionalAttributeSubComponent(key, attrData.value, attrData.status, attrData.unit);
-                }
-            }
-        });
+        this.requestUpdate(); // Force re-render now that we have data
     }
 
     protected _subscribeToAdditionalAttribute(attr: AdditionalAttribute) {
@@ -903,7 +897,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._additionalAttributeSubscriptions.clear();
     }
 
-    protected _determineStatus(value: number, upperThreshold?: number, lowerThreshold?: number): StatusLevel {
+    protected _determineStatus(value: number | string, upperThreshold?: number, lowerThreshold?: number): StatusLevel {
+        // For text values, ignore thresholds and return ok
+        if (typeof value === 'string') {
+            return "ok";
+        }
+        
+        // For numeric values, use threshold logic
         if (upperThreshold !== undefined && value > upperThreshold) {
             return "error";
         }
@@ -1022,6 +1022,16 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return messageStatus === "info" && this.operatingStatus !== undefined;
     }
 
+    protected _formatAttributeName(camelCaseName: string): string {
+        // Convert camelCase to Title Case with spaces
+        // maximumPower -> Maximum Power
+        // temperatureSensor -> Temperature Sensor
+        // status -> Status
+        return camelCaseName
+            .replace(/([a-z])([A-Z])/g, '$1 $2') // Insert space before capital letters
+            .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+    }
+
     protected _updateErrorStatus() {
         const hadError = this._hasErrorStatus;
         const additionalAttributeError = Array.from(this._additionalAttributeValues.values())
@@ -1039,7 +1049,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    protected _updateAdditionalAttributeSubComponent(key: string, value: number, status: StatusLevel, unit?: string) {
+    protected _updateAdditionalAttributeSubComponent(key: string, value: number | string, status: StatusLevel, unit?: string) {
         // Find and update the sub-component directly by its properties
         // This is similar to how _currentValueElem is updated
         const subComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
@@ -1458,7 +1468,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 })}
                 <div class="additional-attributes-tooltip">
                     <div class="tooltip-title">
-                        Additional Attributes${allAttributes.length > 3 ? ` (${allAttributes.length})` : ''}
+                        Device Attributes
                     </div>
                     <div class="tooltip-message">
                         ${allAttributes.map(attr => {
@@ -1471,7 +1481,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                                             icon="${attr.icon}" 
                                             style="--or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
                                         </or-icon>
-                                        ${attr.attributeName}:
+                                        ${this._formatAttributeName(attr.attributeName)}:
                                     </span>
                                     <span class="tooltip-value">
                                         <span class="attr-value">--</span><span class="attr-unit"></span>
@@ -1560,23 +1570,24 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         tooltipRows?.forEach(row => {
             const key = (row as HTMLElement).getAttribute('data-attr-key');
             if (key) {
-                // Find the corresponding main additional attribute component
-                const mainComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as any;
+                // Get data directly from the values map (works for all attributes, not just visible ones)
+                const attrData = this._additionalAttributeValues.get(key);
                 
-                if (mainComponent) {
-                    // Update the tooltip row with values from the main component
+                if (attrData) {
+                    // Update the tooltip row with values from the data map
                     const valueSpan = row.querySelector('.attr-value') as HTMLElement;
                     const unitSpan = row.querySelector('.attr-unit') as HTMLElement;
                     const iconElement = row.querySelector('or-icon') as HTMLElement;
                     
                     if (valueSpan) {
-                        valueSpan.textContent = mainComponent.value !== undefined ? mainComponent.value.toString() : '--';
+                        valueSpan.textContent = attrData.value !== undefined ? attrData.value.toString() : '--';
                     }
                     if (unitSpan) {
-                        unitSpan.textContent = mainComponent.unit || '';
+                        // Only show unit for numeric values
+                        unitSpan.textContent = (typeof attrData.value === 'string') ? '' : (attrData.unit || '');
                     }
                     if (iconElement) {
-                        const status = mainComponent.status || 'ok';
+                        const status = attrData.status || 'ok';
                         const color = status === 'error' ? '#F44336' : status === 'warning' ? '#FF9800' : '#4CAF50';
                         iconElement.style.setProperty('--or-icon-fill', color);
                     }

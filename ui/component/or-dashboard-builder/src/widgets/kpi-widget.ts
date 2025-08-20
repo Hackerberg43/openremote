@@ -139,6 +139,11 @@ export class KpiWidget extends OrAssetWidget {
                                 icon: 'battery',
                                 upperThreshold: 100,
                                 lowerThreshold: 30
+                            },
+                            {
+                                assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                attributeName: 'status',
+                                icon: 'connection'
                             }
                         ]}"
                         style="height: 100%; width: 100%;">
