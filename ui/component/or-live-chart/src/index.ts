@@ -108,7 +108,6 @@ export class OrLiveChartCurrentValue extends LitElement {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 10px;
                 flex: 0 0 auto;
             }
             .current-value-number {
@@ -199,7 +198,7 @@ const style = css`
         padding: 0px 15px 0px 15px;
         background: var(--internal-or-live-chart-background-color);
         border: 1px solid var(--internal-or-live-chart-border-color);
-        border-radius: 25px;
+        border-radius: 20px;
     }
 
     .panel-content {
@@ -225,20 +224,22 @@ const style = css`
         max-height: 100%;
     }
 
-    .controls-wrapper {
+    .additional-attributes-wrapper {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 15px;
+        justify-content: flex-end;
+        align-items: end;
+        padding: 10px 5px;
         flex: 0 0 auto;
         border-top: 1px solid var(--internal-or-live-chart-border-color);
         gap: 10px;
     }
 
-    .control-group {
+    .main-group {
         display: flex;
-        align-items: center;
-        gap: 10px;
+        align-items: start;
+        padding-left: 5px;
+        padding-top: 20px;
+        flex-direction: column;
     }
 
     .status-indicator {
@@ -324,6 +325,7 @@ const style = css`
         display: flex;
         align-items: center;
         gap: 8px;
+        justify-content: flex-end;
     }
 `;
 
@@ -857,7 +859,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._chart = echarts.init(this._chartElem);
 
         const chartOptions: ECChartOption = {
-            animation: true,
+            animation: false,
             //backgroundColor: this._style.getPropertyValue("--internal-or-live-chart-background-color"),
             grid: {
                 show: false,
@@ -1055,18 +1057,17 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     <div class="chart-container">
                         <div id="chart"></div>
                     </div>
-                    
-                    <or-live-chart-current-value 
-                        .asset="${this._asset}"
-                    ></or-live-chart-current-value>
-                </div>
-                <div class="controls-wrapper">
-                    <div class="control-group">
+                    <div class="main-group">
                         <div class="status-indicator">
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
                             <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
                         </div>
+                    <or-live-chart-current-value 
+                        .asset="${this._asset}"
+                    ></or-live-chart-current-value>
                     </div>
+                </div>
+                <div class="additional-attributes-wrapper">
                     ${this._renderAdditionalAttributes()}
                 </div>
             </div>
