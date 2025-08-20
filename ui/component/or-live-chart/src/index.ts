@@ -163,6 +163,8 @@ export interface LiveChartDataPoint {
 export type TimeframeOption = "5minutes" | "30minutes" | "1hour";
 export type RefreshIntervalOption = "1second" | "1minute";
 
+export type OperatingStatus = "running" | "dischargingOnly";
+
 export interface AdditionalAttribute {
     assetId: string;
     attributeName: string;
@@ -247,7 +249,8 @@ const style = css`
         align-items: center;
         font-size: 12px;
         color: var(--internal-or-live-chart-text-color);
-        opacity: 0.7;
+        position: relative;
+        cursor: help;
     }
 
     .status-dot {
@@ -336,9 +339,28 @@ const style = css`
         cursor: help;
     }
 
+    .icon-wrapper {
+        position: relative;
+        display: inline-block;
+        overflow: visible;
+    }
+
     .status-message-icon {
         --or-icon-width: 32px;
         --or-icon-height: 32px;
+    }
+
+    .overlay-info-icon {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        --or-icon-width: 14px;
+        --or-icon-height: 14px;
+        --or-icon-fill: rgb(33, 150, 243);
+        background: var(--internal-or-live-chart-background-color);
+        border-radius: 50%;
+        padding: 1px;
+        z-index: 1;
     }
 
     .status-message-icon.info {
@@ -357,9 +379,9 @@ const style = css`
         position: fixed;
         background: var(--internal-or-live-chart-background-color);
         color: var(--internal-or-live-chart-text-color);
-        padding: 8px 12px;
+        padding: 12px;
         border-radius: 6px;
-        font-size: 20px;
+        font-size: 16px;
         white-space: normal;
         max-width: 300px;
         word-wrap: break-word;
@@ -367,11 +389,109 @@ const style = css`
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s, visibility 0.2s;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        border: 1px solid var(--internal-or-live-chart-border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         pointer-events: none;
     }
 
+    .tooltip-title {
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 8px;
+        color: var(--internal-or-live-chart-text-color);
+    }
+
+    .tooltip-message {
+        margin-bottom: 8px;
+        line-height: 1.4;
+    }
+
+    .tooltip-note {
+        font-size: 12px;
+        opacity: 0.7;
+        font-style: italic;
+        border-top: 1px solid var(--internal-or-live-chart-border-color);
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+
+    .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+
+    .tooltip-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .tooltip-label {
+        font-weight: bold;
+        margin-right: 16px;
+    }
+
+    .tooltip-value {
+        text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
     .status-message-container:hover .status-message-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .status-indicator-tooltip {
+        position: fixed;
+        background: var(--internal-or-live-chart-background-color);
+        color: var(--internal-or-live-chart-text-color);
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        white-space: normal;
+        max-width: 300px;
+        word-wrap: break-word;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        border: 1px solid var(--internal-or-live-chart-border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+    }
+
+    .status-indicator:hover .status-indicator-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .additional-attributes-tooltip {
+        position: fixed;
+        background: var(--internal-or-live-chart-background-color);
+        color: var(--internal-or-live-chart-text-color);
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        white-space: normal;
+        max-width: 300px;
+        word-wrap: break-word;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        border: 1px solid var(--internal-or-live-chart-border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+    }
+
+    .additional-attributes {
+        position: relative;
+        cursor: help;
+    }
+
+    .additional-attributes:hover .additional-attributes-tooltip {
         opacity: 1;
         visibility: visible;
     }
@@ -407,6 +527,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     @property({type: String})
     public statusMessage?: string;
+
+    @property({type: String})
+    public operatingStatus?: OperatingStatus;
 
     @state()
     protected _loading = false;
@@ -453,6 +576,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _mouseLeaveHandler?: any;
     protected _tooltipMouseEnterHandler?: any;
     protected _tooltipMouseLeaveHandler?: any;
+    protected _statusTooltipMouseEnterHandler?: any;
 
     constructor() {
         super();
@@ -491,7 +615,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                           changedProperties.has("refreshInterval") ||
                           changedProperties.has("additionalAttributes");
                           
-        if (changedProperties.has("statusMessage")) {
+        if (changedProperties.has("statusMessage") || changedProperties.has("operatingStatus")) {
             this._updateErrorStatus();
         }
 
@@ -505,11 +629,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
         
         // Setup tooltip positioning after any render
-        if (this.statusMessage && this._determineMessageStatus(this.statusMessage)) {
-            this.updateComplete.then(() => {
-                this._setupTooltipEventListeners();
-            });
-        }
+        this.updateComplete.then(() => {
+            this._setupTooltipEventListeners();
+        });
     }
 
     protected _updateTimeframeMs() {
@@ -695,10 +817,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             return;
         }
 
-        // Limit to maximum 3 additional attributes
-        const limitedAttributes = this.additionalAttributes.slice(0, 3);
+        // Process all additional attributes (no limit)
+        const allAttributes = this.additionalAttributes;
         
-        for (const attr of limitedAttributes) {
+        for (const attr of allAttributes) {
             try {
                 // Load asset information to get units
                 const assetResponse = await manager.rest.api.AssetResource.get(attr.assetId);
@@ -744,7 +866,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         
         // Wait for next update cycle to ensure DOM is ready, then update sub-components
         this.updateComplete.then(() => {
-            for (const attr of limitedAttributes) {
+            for (const attr of allAttributes) {
                 const key = `${attr.assetId}_${attr.attributeName}`;
                 const attrData = this._additionalAttributeValues.get(key);
                 if (attrData) {
@@ -802,7 +924,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         
         const lowerMessage = message.toLowerCase();
         
-        if (lowerMessage.includes("error")) {
+        if (lowerMessage.includes("emergency")) {
             return "error";
         }
         if (lowerMessage.includes("warning")) {
@@ -825,6 +947,79 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             default:
                 return "information";
         }
+    }
+
+    protected _getOperatingStatusIcon(operatingStatus?: OperatingStatus): string {
+        switch (operatingStatus) {
+            case "running":
+                return "lightning-bolt";
+            case "dischargingOnly":
+                return "battery";
+            default:
+                return "help-circle";
+        }
+    }
+
+    protected _getOperatingStatusColor(operatingStatus?: OperatingStatus): string {
+        switch (operatingStatus) {
+            case "running":
+                return "#4CAF50"; // green
+            case "dischargingOnly":
+                return "#bfff00"; // orange
+            default:
+                return "#9E9E9E"; // gray
+        }
+    }
+
+    protected _getTimeframeDisplay(timeframe: TimeframeOption): string {
+        switch (timeframe) {
+            case "5minutes":
+                return "5 minutes";
+            case "30minutes":
+                return "30 minutes";
+            case "1hour":
+                return "1 hour";
+            default:
+                return timeframe;
+        }
+    }
+
+    protected _getRefreshIntervalDisplay(refreshInterval: RefreshIntervalOption): string {
+        switch (refreshInterval) {
+            case "1second":
+                return "1 second";
+            case "1minute":
+                return "1 minute";
+            default:
+                return refreshInterval;
+        }
+    }
+
+    protected _shouldShowIcon(): boolean {
+        return this.operatingStatus !== undefined || (this.statusMessage !== undefined && this._determineMessageStatus(this.statusMessage) !== null);
+    }
+
+    protected _getPrimaryIcon(): { icon: string; color: string } {
+        const messageStatus = this._determineMessageStatus(this.statusMessage);
+        
+        // If statusMessage contains emergency or warning, use message status icon
+        if (messageStatus === "error" || messageStatus === "warning") {
+            return {
+                icon: this._getStatusIcon(messageStatus),
+                color: messageStatus === "error" ? "#F44336" : "#FF9800"
+            };
+        }
+        
+        // Otherwise use operating status icon
+        return {
+            icon: this._getOperatingStatusIcon(this.operatingStatus),
+            color: this._getOperatingStatusColor(this.operatingStatus)
+        };
+    }
+
+    protected _shouldShowInfoOverlay(): boolean {
+        const messageStatus = this._determineMessageStatus(this.statusMessage);
+        return messageStatus === "info" && this.operatingStatus !== undefined;
     }
 
     protected _updateErrorStatus() {
@@ -1167,19 +1362,64 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     <div class="main-group">
                         <div class="status-indicator">
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
-                            <span>${this._isLive ? 'Live' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
+                            <span>${this._isLive ? 'Connected' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
+                            <div class="status-indicator-tooltip">
+                                <div class="tooltip-title">
+                                    Connection
+                                </div>
+                                <div class="tooltip-message">
+                                    <div class="tooltip-row">
+                                        <span class="tooltip-label">Chart Timeframe:</span>
+                                        <span class="tooltip-value">${this._getTimeframeDisplay(this.timeframe)}</span>
+                                    </div>
+                                    <div class="tooltip-row">
+                                        <span class="tooltip-label">Refresh Interval:</span>
+                                        <span class="tooltip-value">${this._getRefreshIntervalDisplay(this.refreshInterval)}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     <or-live-chart-current-value 
                         .asset="${this._asset}"
                     ></or-live-chart-current-value>
-                    ${this.statusMessage && this._determineMessageStatus(this.statusMessage) ? html`
+                    ${this._shouldShowIcon() ? html`
                         <div class="status-message-container">
-                            <or-icon 
-                                class="status-message-icon ${this._determineMessageStatus(this.statusMessage)}" 
-                                icon="${this._getStatusIcon(this._determineMessageStatus(this.statusMessage)!)}">
-                            </or-icon>
+                            <div class="icon-wrapper">
+                                <or-icon 
+                                    class="status-message-icon" 
+                                    icon="${this._getPrimaryIcon().icon}"
+                                    style="--or-icon-fill: ${this._getPrimaryIcon().color}">
+                                </or-icon>
+                                ${this._shouldShowInfoOverlay() ? html`
+                                    <or-icon class="overlay-info-icon" icon="information"></or-icon>
+                                ` : ''}
+                            </div>
                             <div class="status-message-tooltip">
-                                ${this.statusMessage}
+                                ${this.statusMessage ? html`
+                                    <div class="tooltip-title">
+                                        Message
+                                    </div>
+                                    <div class="tooltip-message">
+                                        ${this.statusMessage}
+                                    </div>
+                                ` : ''}
+                                ${this.operatingStatus ? html`
+                                    <div class="tooltip-row">
+                                        <span class="tooltip-label">Operating Status:</span>
+                                        <span class="tooltip-value">
+                                            <or-icon 
+                                                icon="${this._getOperatingStatusIcon(this.operatingStatus)}"
+                                                style="--or-icon-fill: ${this._getOperatingStatusColor(this.operatingStatus)}; --or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
+                                            </or-icon>
+                                            ${this.operatingStatus}
+                                        </span>
+                                    </div>
+                                ` : ''}
+                                ${this.statusMessage ? html`
+                                    <div class="tooltip-note">
+                                        You can only clear this message in the machine.
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     ` : ''}
@@ -1197,11 +1437,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             return html``;
         }
 
-        const limitedAttributes = this.additionalAttributes.slice(0, 3);
+        const visibleAttributes = this.additionalAttributes.slice(0, 3); // Only show first 3
+        const allAttributes = this.additionalAttributes; // All for tooltip
         
         return html`
             <div class="additional-attributes">
-                ${limitedAttributes.map(attr => {
+                ${visibleAttributes.map(attr => {
                     const key = `${attr.assetId}_${attr.attributeName}`;
                     const attrData = this._additionalAttributeValues.get(key);
                     
@@ -1215,6 +1456,31 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         </or-live-chart-additional-attribute>
                     `;
                 })}
+                <div class="additional-attributes-tooltip">
+                    <div class="tooltip-title">
+                        Additional Attributes${allAttributes.length > 3 ? ` (${allAttributes.length})` : ''}
+                    </div>
+                    <div class="tooltip-message">
+                        ${allAttributes.map(attr => {
+                            const key = `${attr.assetId}_${attr.attributeName}`;
+                            
+                            return html`
+                                <div class="tooltip-row" data-attr-key="${key}">
+                                    <span class="tooltip-label">
+                                        <or-icon 
+                                            icon="${attr.icon}" 
+                                            style="--or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
+                                        </or-icon>
+                                        ${attr.attributeName}:
+                                    </span>
+                                    <span class="tooltip-value">
+                                        <span class="attr-value">--</span><span class="attr-unit"></span>
+                                    </span>
+                                </div>
+                            `;
+                        })}
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1241,6 +1507,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _setupTooltipEventListeners() {
+        // Setup status message tooltip
         const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
         const tooltip = this.shadowRoot?.querySelector('.status-message-tooltip') as HTMLElement;
         
@@ -1253,12 +1520,80 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             
             container.addEventListener('mouseenter', this._tooltipMouseEnterHandler);
         }
+
+        // Setup status indicator tooltip
+        const statusIndicator = this.shadowRoot?.querySelector('.status-indicator') as HTMLElement;
+        const statusTooltip = this.shadowRoot?.querySelector('.status-indicator-tooltip') as HTMLElement;
+        
+        if (statusIndicator && statusTooltip) {
+            this._statusTooltipMouseEnterHandler = (e: MouseEvent) => {
+                const rect = statusIndicator.getBoundingClientRect();
+                statusTooltip.style.left = `${rect.left}px`; // Position from left edge
+                statusTooltip.style.top = `${rect.top - statusTooltip.offsetHeight - 10}px`; // Position above indicator
+            };
+            
+            statusIndicator.addEventListener('mouseenter', this._statusTooltipMouseEnterHandler);
+        }
+
+        // Setup additional attributes tooltip
+        const attributesContainer = this.shadowRoot?.querySelector('.additional-attributes') as HTMLElement;
+        const attributesTooltip = this.shadowRoot?.querySelector('.additional-attributes-tooltip') as HTMLElement;
+        
+        if (attributesContainer && attributesTooltip) {
+            const attributesTooltipMouseEnterHandler = (e: MouseEvent) => {
+                // Update tooltip values from the main additional attribute components
+                this._updateAdditionalAttributesTooltip();
+                
+                const rect = attributesContainer.getBoundingClientRect();
+                attributesTooltip.style.left = `${rect.right - 300}px`; // Position from right edge
+                attributesTooltip.style.top = `${rect.top - attributesTooltip.offsetHeight - 10}px`; // Position above container
+            };
+            
+            attributesContainer.addEventListener('mouseenter', attributesTooltipMouseEnterHandler);
+        }
+    }
+
+    protected _updateAdditionalAttributesTooltip() {
+        // Get all tooltip rows
+        const tooltipRows = this.shadowRoot?.querySelectorAll('.additional-attributes-tooltip .tooltip-row[data-attr-key]');
+        
+        tooltipRows?.forEach(row => {
+            const key = (row as HTMLElement).getAttribute('data-attr-key');
+            if (key) {
+                // Find the corresponding main additional attribute component
+                const mainComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as any;
+                
+                if (mainComponent) {
+                    // Update the tooltip row with values from the main component
+                    const valueSpan = row.querySelector('.attr-value') as HTMLElement;
+                    const unitSpan = row.querySelector('.attr-unit') as HTMLElement;
+                    const iconElement = row.querySelector('or-icon') as HTMLElement;
+                    
+                    if (valueSpan) {
+                        valueSpan.textContent = mainComponent.value !== undefined ? mainComponent.value.toString() : '--';
+                    }
+                    if (unitSpan) {
+                        unitSpan.textContent = mainComponent.unit || '';
+                    }
+                    if (iconElement) {
+                        const status = mainComponent.status || 'ok';
+                        const color = status === 'error' ? '#F44336' : status === 'warning' ? '#FF9800' : '#4CAF50';
+                        iconElement.style.setProperty('--or-icon-fill', color);
+                    }
+                }
+            }
+        });
     }
 
     protected _removeTooltipEventListeners() {
         const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
         if (container && this._tooltipMouseEnterHandler) {
             container.removeEventListener('mouseenter', this._tooltipMouseEnterHandler);
+        }
+
+        const statusIndicator = this.shadowRoot?.querySelector('.status-indicator') as HTMLElement;
+        if (statusIndicator && this._statusTooltipMouseEnterHandler) {
+            statusIndicator.removeEventListener('mouseenter', this._statusTooltipMouseEnterHandler);
         }
     }
 }
