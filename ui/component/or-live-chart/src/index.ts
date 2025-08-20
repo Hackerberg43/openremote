@@ -387,7 +387,7 @@ const style = css`
         white-space: normal;
         max-width: 300px;
         word-wrap: break-word;
-        z-index: 9999;
+        z-index: 1000;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s, visibility 0.2s;
@@ -458,7 +458,7 @@ const style = css`
         white-space: normal;
         max-width: 300px;
         word-wrap: break-word;
-        z-index: 9999;
+        z-index: 1000;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s, visibility 0.2s;
@@ -482,7 +482,7 @@ const style = css`
         white-space: normal;
         width: 300px;
         word-wrap: break-word;
-        z-index: 9999;
+        z-index: 1000;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.2s, visibility 0.2s;
@@ -582,6 +582,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _tooltipMouseEnterHandler?: any;
     protected _tooltipMouseLeaveHandler?: any;
     protected _statusTooltipMouseEnterHandler?: any;
+    protected _activeTooltip?: HTMLElement;
+    protected _tooltipTimeout?: ReturnType<typeof setTimeout>;
+    protected _globalTouchHandler?: (e: TouchEvent) => void;
 
     constructor() {
         super();
@@ -595,6 +598,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         console.log('or-live-chart connectedCallback called');
         this._style = window.getComputedStyle(this as unknown as Element);
         this.realm = this.realm || manager.getRealm();
+        
+        // Setup global touch handler for mobile devices
+        if (this._isMobileDevice()) {
+            this._setupGlobalTouchHandler();
+        }
     }
 
     disconnectedCallback() {
@@ -1289,6 +1297,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
 
         this._removeTooltipEventListeners();
+        this._removeGlobalTouchHandler();
 
         this._data = [];
         this._lastReceivedValue = undefined;
@@ -1523,12 +1532,20 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         
         if (container && tooltip) {
             this._tooltipMouseEnterHandler = (e: MouseEvent) => {
-                const rect = container.getBoundingClientRect();
-                tooltip.style.left = `${rect.right - 250}px`; // Position from right edge, accounting for tooltip width
-                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`; // Position above icon
+                this._positionTooltipWithinFrame(tooltip, e.clientX, e.clientY);
+            };
+            
+            const touchHandler = (e: TouchEvent) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (touch) {
+                    this._positionTooltipWithinFrame(tooltip, touch.clientX, touch.clientY);
+                    this._showTooltip(tooltip);
+                }
             };
             
             container.addEventListener('mouseenter', this._tooltipMouseEnterHandler);
+            container.addEventListener('touchstart', touchHandler);
         }
 
         // Setup status indicator tooltip
@@ -1537,12 +1554,20 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         
         if (statusIndicator && statusTooltip) {
             this._statusTooltipMouseEnterHandler = (e: MouseEvent) => {
-                const rect = statusIndicator.getBoundingClientRect();
-                statusTooltip.style.left = `${rect.left}px`; // Position from left edge
-                statusTooltip.style.top = `${rect.top - statusTooltip.offsetHeight - 10}px`; // Position above indicator
+                this._positionTooltipWithinFrame(statusTooltip, e.clientX, e.clientY);
+            };
+            
+            const statusTouchHandler = (e: TouchEvent) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (touch) {
+                    this._positionTooltipWithinFrame(statusTooltip, touch.clientX, touch.clientY);
+                    this._showTooltip(statusTooltip);
+                }
             };
             
             statusIndicator.addEventListener('mouseenter', this._statusTooltipMouseEnterHandler);
+            statusIndicator.addEventListener('touchstart', statusTouchHandler);
         }
 
         // Setup additional attributes tooltip
@@ -1553,13 +1578,21 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             const attributesTooltipMouseEnterHandler = (e: MouseEvent) => {
                 // Update tooltip values from the main additional attribute components
                 this._updateAdditionalAttributesTooltip();
-                
-                const rect = attributesContainer.getBoundingClientRect();
-                attributesTooltip.style.left = `${rect.right - 300}px`; // Position from right edge
-                attributesTooltip.style.top = `${rect.top - attributesTooltip.offsetHeight - 10}px`; // Position above container
+                this._positionTooltipWithinFrame(attributesTooltip, e.clientX, e.clientY);
+            };
+            
+            const attributesTouchHandler = (e: TouchEvent) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (touch) {
+                    this._updateAdditionalAttributesTooltip();
+                    this._positionTooltipWithinFrame(attributesTooltip, touch.clientX, touch.clientY);
+                    this._showTooltip(attributesTooltip);
+                }
             };
             
             attributesContainer.addEventListener('mouseenter', attributesTooltipMouseEnterHandler);
+            attributesContainer.addEventListener('touchstart', attributesTouchHandler);
         }
     }
 
@@ -1594,6 +1627,108 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 }
             }
         });
+    }
+
+    protected _showTooltip(tooltip: HTMLElement) {
+        // Hide any currently active tooltip
+        this._hideActiveTooltip();
+        
+        // Show the new tooltip
+        tooltip.style.opacity = '1';
+        tooltip.style.visibility = 'visible';
+        this._activeTooltip = tooltip;
+        
+        // Set a timeout to hide the tooltip on mobile after 3 seconds
+        if (this._isMobileDevice()) {
+            this._tooltipTimeout = setTimeout(() => {
+                this._hideActiveTooltip();
+            }, 3000);
+        }
+    }
+
+    protected _hideActiveTooltip() {
+        if (this._activeTooltip) {
+            this._activeTooltip.style.opacity = '0';
+            this._activeTooltip.style.visibility = 'hidden';
+            this._activeTooltip = undefined;
+        }
+        
+        if (this._tooltipTimeout) {
+            clearTimeout(this._tooltipTimeout);
+            this._tooltipTimeout = undefined;
+        }
+    }
+
+    protected _isMobileDevice(): boolean {
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    }
+
+    protected _setupGlobalTouchHandler() {
+        if (this._globalTouchHandler) return; // Already setup
+        
+        this._globalTouchHandler = (e: TouchEvent) => {
+            // Check if the touch target is outside the component
+            const componentElement = this.shadowRoot?.host as HTMLElement;
+            if (componentElement && !componentElement.contains(e.target as Node)) {
+                this._hideActiveTooltip();
+            }
+        };
+        
+        document.addEventListener('touchstart', this._globalTouchHandler);
+    }
+
+    protected _removeGlobalTouchHandler() {
+        if (this._globalTouchHandler) {
+            document.removeEventListener('touchstart', this._globalTouchHandler);
+            this._globalTouchHandler = undefined;
+        }
+    }
+
+    protected _positionTooltipWithinFrame(tooltip: HTMLElement, cursorX: number, cursorY: number) {
+        const panelRect = this._panelElem?.getBoundingClientRect();
+        if (!panelRect) {
+            // Fallback positioning
+            tooltip.style.left = `${cursorX - 150}px`;
+            tooltip.style.top = `${cursorY + 10}px`;
+            return;
+        }
+
+        const tooltipWidth = 300; // Approximate tooltip width
+        const tooltipHeight = 100; // Approximate tooltip height
+        const margin = 10; // Margin from panel edges
+
+        // Calculate horizontal position (centered under cursor)
+        let left = cursorX - tooltipWidth / 2;
+        
+        // Ensure tooltip doesn't go outside panel horizontally
+        if (left + tooltipWidth > panelRect.right) {
+            left = panelRect.right - tooltipWidth - margin;
+        }
+        if (left < panelRect.left) {
+            left = panelRect.left + margin;
+        }
+
+        // Calculate vertical position (below cursor by default, above if not enough space)
+        let top = cursorY + 35; // Default: below cursor with adequate offset
+        
+        // Check if tooltip would go below panel bottom
+        if (top + tooltipHeight > panelRect.bottom) {
+            // Position above cursor instead
+            top = cursorY - tooltipHeight - 60;
+            
+            // If still above panel top, position at top with margin
+            if (top < panelRect.top) {
+                top = panelRect.top + margin;
+            }
+        }
+        
+        // Ensure tooltip doesn't go above panel top
+        if (top < panelRect.top) {
+            top = panelRect.top + margin;
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
     }
 
     protected _removeTooltipEventListeners() {
