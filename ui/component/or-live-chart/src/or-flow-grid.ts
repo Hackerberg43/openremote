@@ -18,12 +18,19 @@ export interface FlowGridChart {
     additionalAttributes?: any[];
 }
 
+export interface FlowLineValues {
+    storage?: number;
+    grid?: number;
+    producers?: number;
+    consumers?: number;
+}
+
 // language=CSS
 const style = css`
     :host {
         --internal-or-flow-grid-background-color: var(--or-flow-grid-background-color, var(--or-app-color2, ${unsafeCSS(DefaultColor2)}));
         --internal-or-flow-grid-text-color: var(--or-flow-grid-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
-        
+
         width: 100%;
         height: 100%;
         display: block;
@@ -104,8 +111,24 @@ const style = css`
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
         z-index: 10;
+        animation: heartbeat 5s ease-in-out infinite;
+    }
+
+    @keyframes heartbeat {
+        0%, 90%, 100% {
+            transform: translate(-50%, -50%) scale(1);
+            box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
+        }
+        20% {
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1);
+            box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
+        }
     }
 
     .central-node or-icon {
@@ -126,9 +149,57 @@ const style = css`
     }
 
     .connection-line {
-        stroke: #2196F3;
-        stroke-width: 2;
+        stroke: rgba(128, 128, 128, 0.5);
+        stroke-width: 5;
         opacity: 0.7;
+        fill: none;
+    }
+
+    /* Flow particles */
+    .flow-particle {
+        opacity: 0.2;
+    }
+
+    .flow-particle.positive {
+        fill: #2196F3;
+    }
+
+    .flow-particle.negative {
+        fill: #f44336;
+    }
+
+    @keyframes flowForward {
+        0% {
+            offset-distance: 0%;
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.8;
+        }
+        90% {
+            opacity: 0.8;
+        }
+        100% {
+            offset-distance: 100%;
+            opacity: 0;
+        }
+    }
+
+    @keyframes flowReverse {
+        0% {
+            offset-distance: 100%;
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.8;
+        }
+        90% {
+            opacity: 0.8;
+        }
+        100% {
+            offset-distance: 0%;
+            opacity: 0;
+        }
     }
 
     /* Labels */
@@ -156,6 +227,17 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
 
     @property({type: Boolean})
     public disabled = false;
+
+    @property({type: Object})
+    public flowValues: FlowLineValues = {
+        storage: 30,
+        grid: -25,
+        producers: 40,
+        consumers: -35
+    };
+
+    @property({type: Number})
+    public maxFlowValue: number = 100;
 
     @state()
     private _nodePositions: Map<string, {x: number, y: number}> = new Map();
@@ -219,6 +301,106 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         return this.charts.find(chart => chart.position === position);
     }
 
+    protected _getFlowAnimation(pathLength: number = 200, flowValue: number = 0) {
+        const flowPercent = Math.abs(flowValue) / this.maxFlowValue;
+        const duration = 5;//Math.max(4, 7 - (flowPercent * 0.3)); // Faster flow = shorter duration
+        const direction = flowValue >= 0 ? 'flowForward' : 'flowReverse';
+        
+        // Calculate particle count based on path length to maintain consistent spacing
+        const particleSpacing = 60; // pixels between particles
+        const particleCount = Math.max(2, Math.floor((pathLength / particleSpacing) * flowPercent * 3));
+        
+        return { duration, direction, particleCount, flowPercent, flowValue };
+    }
+
+    protected _calculatePathLength(pathType: string): number {
+        const storagePos = this._nodePositions.get('storage');
+        const centralPos = this._nodePositions.get('central');
+        const gridPos = this._nodePositions.get('grid');
+        const producerPos = this._nodePositions.get('producers');
+        const consumerPos = this._nodePositions.get('consumers');
+
+        if (!centralPos) return 200; // default fallback
+
+        switch (pathType) {
+            case 'storage-path':
+                if (!storagePos) return 200;
+                return Math.sqrt(Math.pow(centralPos.x - storagePos.x, 2) + Math.pow(centralPos.y - storagePos.y, 2));
+            
+            case 'grid-path':
+                if (!gridPos) return 200;
+                return Math.sqrt(Math.pow(gridPos.x - centralPos.x, 2) + Math.pow(gridPos.y - centralPos.y, 2));
+            
+            case 'producer-path':
+                if (!producerPos) return 200;
+                // Approximate length for the curved path (horizontal + diagonal segments)
+                const prodHorizontal = Math.abs(0.5 * (centralPos.x - producerPos.x));
+                const prodDiagonal = Math.sqrt(Math.pow(0.5 * (centralPos.x - producerPos.x), 2) + Math.pow(centralPos.y - producerPos.y, 2));
+                return prodHorizontal + prodDiagonal;
+            
+            case 'consumer-path':
+                if (!consumerPos) return 200;
+                // Approximate length for the curved path (horizontal + diagonal segments)
+                const consHorizontal = Math.abs(0.5 * (centralPos.x - consumerPos.x));
+                const consDiagonal = Math.sqrt(Math.pow(0.5 * (centralPos.x - consumerPos.x), 2) + Math.pow(centralPos.y - consumerPos.y, 2));
+                return consHorizontal + consDiagonal;
+            
+            default:
+                return 200;
+        }
+    }
+
+    protected _getLineFlowValue(pathId: string): number {
+        switch (pathId) {
+            case 'storage-path':
+                return this.flowValues.storage || 0;
+            case 'grid-path':
+                return this.flowValues.grid || 0;
+            case 'producer-path':
+                return this.flowValues.producers || 0;
+            case 'consumer-path':
+                return this.flowValues.consumers || 0;
+            default:
+                return 0;
+        }
+    }
+
+    protected _renderFlowParticles(pathId: string) {
+        const pathLength = this._calculatePathLength(pathId);
+        const lineFlowValue = this._getLineFlowValue(pathId);
+        const { duration, direction, particleCount, flowPercent, flowValue } = this._getFlowAnimation(pathLength, lineFlowValue);
+        
+        if (flowPercent === 0) return html``;
+
+        const particles = [];
+        for (let i = 0; i < particleCount; i++) {
+            const delay = (i / particleCount) * duration;
+            const isReverse = flowValue < 0;
+            
+            particles.push(svg`
+                <circle class="flow-particle positive" r="2">
+                    <animateMotion dur="${duration}s" 
+                                   begin="${delay}s"
+                                   repeatCount="indefinite"
+                                   rotate="auto"
+                                   keyTimes="0;0.1;0.9;1"
+                                   keyPoints="${isReverse ? '1;1;0;0' : '0;0;1;1'}"
+                                   calcMode="linear">
+                        <mpath href="#${pathId}"/>
+                    </animateMotion>
+                    <animate attributeName="opacity"
+                             dur="${duration}s"
+                             begin="${delay}s"
+                             repeatCount="indefinite"
+                             values="0;0.8;0.8;0"
+                             keyTimes="0;0.1;0.9;1"/>
+                </circle>
+            `);
+        }
+        
+        return svg`${particles}`;
+    }
+
     protected _renderChart(position: FlowGridChart['position'], label: string) {
         const chart = this._getChartByPosition(position);
         
@@ -276,17 +458,51 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 ${this._renderChart('grid', 'Grid')}
                 <!-- Central node -->
                 <div class="central-node">
-                    <or-icon icon="lightning-bolt"></or-icon>
+                    <or-icon icon="file-powerpoint-box-outline"></or-icon>
                 </div>
                 <div>
                     <!-- Connection lines -->
                     <svg class="connection-lines">
+                        <defs>
+                            <!-- Define paths for animation -->
+                            ${storagePos && centralPos ? svg`
+                                <path id="storage-path" 
+                                      d="M ${storagePos.x || 0} ${storagePos.y || 0} 
+                                         L ${centralPos.x || 0} ${centralPos.y || 0}">
+                                </path>
+                            ` : ''}
+                            ${centralPos && gridPos ? svg`
+                                <path id="grid-path" 
+                                      d="M ${centralPos.x || 0} ${centralPos.y || 0} 
+                                         L ${gridPos.x || 0} ${gridPos.y || 0}">
+                                </path>
+                            ` : ''}
+                            ${centralPos && producerPos ? svg`
+                                <path id="producer-path" 
+                                      d="M ${producerPos.x || 0} ${producerPos.y || 0} 
+                                         L ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x) - 10) || 0} ${producerPos.y || 0}
+                                         Q ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x)) || 0} ${producerPos.y || 0} 
+                                           ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x) + 10) || 0} ${(producerPos.y + 10 * Math.sign((centralPos.y || 0) - (producerPos.y || 0))) || 0}
+                                         L ${centralPos.x || 0} ${centralPos.y || 0}">
+                                </path>
+                            ` : ''}
+                            ${centralPos && consumerPos ? svg`
+                                <path id="consumer-path" 
+                                      d="M ${consumerPos.x || 0} ${consumerPos.y || 0} 
+                                         L ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) - 10) || 0} ${consumerPos.y || 0}
+                                         Q ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x)) || 0} ${consumerPos.y || 0} 
+                                           ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) + 10) || 0} ${(consumerPos.y + 10 * Math.sign((centralPos.y || 0) - (consumerPos.y || 0))) || 0}
+                                         L ${centralPos.x || 0} ${centralPos.y || 0}">
+                                </path>
+                            ` : ''}
+                        </defs>
+
                         <!-- Storage line -->
                         ${storagePos && centralPos ? svg`
                             <path class="connection-line" 
                                   d="M ${storagePos.x || 0} ${storagePos.y || 0} 
                                      L ${centralPos.x || 0} ${centralPos.y || 0}"
-                                  style="stroke: green; stroke-width: 3px; fill: none;">
+                                  >
                             </path>
                         ` : svg`<!-- No storage/central positions yet -->`}
                         
@@ -295,7 +511,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                             <path class="connection-line" 
                                   d="M ${centralPos.x || 0} ${centralPos.y || 0} 
                                      L ${gridPos.x || 0} ${gridPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                                  >
                             </path>
                         ` : svg`<!-- No central/grid positions yet -->`}
                        
@@ -307,7 +523,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                                      Q ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x)) || 0} ${producerPos.y || 0} 
                                        ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x) + 10) || 0} ${(producerPos.y + 10 * Math.sign((centralPos.y || 0) - (producerPos.y || 0))) || 0}
                                      L ${centralPos.x || 0} ${centralPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                                  >
                             </path>
                         ` : svg`<!-- No central/producer positions yet -->`}
 
@@ -319,9 +535,15 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                                      Q ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x)) || 0} ${consumerPos.y || 0} 
                                        ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) + 10) || 0} ${(consumerPos.y + 10 * Math.sign((centralPos.y || 0) - (consumerPos.y || 0))) || 0}
                                      L ${centralPos.x || 0} ${centralPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                                  >
                             </path>
                         ` : svg`<!-- No central/consumer positions yet -->`}
+
+                        <!-- Animated flow particles -->
+                        ${storagePos && centralPos ? this._renderFlowParticles('storage-path') : ''}
+                        ${centralPos && gridPos ? this._renderFlowParticles('grid-path') : ''}
+                        ${centralPos && producerPos ? this._renderFlowParticles('producer-path') : ''}
+                        ${centralPos && consumerPos ? this._renderFlowParticles('consumer-path') : ''}
                     </svg>
                 </div>
                 

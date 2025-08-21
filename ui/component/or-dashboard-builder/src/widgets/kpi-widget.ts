@@ -113,7 +113,14 @@ export class KpiWidget extends OrAssetWidget {
                 })}
                 <!-- Example using or-flow-grid component -->
                 <or-flow-grid
-                    .charts="${[
+                        .flowValues="${{
+                            storage: -30,
+                            grid: 0,
+                            producers: 100,
+                            consumers: -70
+                        }}"
+                        .maxFlowValue="100"
+                        .charts="${[
                         {
                             position: 'producers',
                             assetId: '5ydJLbMubRRyPnZMJEU97v',
@@ -141,7 +148,7 @@ export class KpiWidget extends OrAssetWidget {
                             refreshInterval: '1second',
                             operatingStatus: 'running',
                             linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
-                            statusMessage: 'Battery storage charging',
+                            statusMessage: 'Emergency: Battery exploded.',
                             additionalAttributes: [
                                 {
                                     assetId: '5ydJLbMubRRyPnZMJEU97v',
@@ -158,7 +165,7 @@ export class KpiWidget extends OrAssetWidget {
                             refreshInterval: '1second',
                             operatingStatus: 'running',
                             linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
-                            statusMessage: 'Consuming energy for heating',
+                            statusMessage: 'Info: Consuming energy for heating',
                             additionalAttributes: [
                                 {
                                     assetId: '5ydJLbMubRRyPnZMJEU97v',
@@ -175,7 +182,7 @@ export class KpiWidget extends OrAssetWidget {
                             refreshInterval: '1second',
                             operatingStatus: 'running',
                             linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
-                            statusMessage: 'Connected to main grid',
+                            statusMessage: 'Warning: Connected to main grid',
                             additionalAttributes: [
                                 {
                                     assetId: '5ydJLbMubRRyPnZMJEU97v',
