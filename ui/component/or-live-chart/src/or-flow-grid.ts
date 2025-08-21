@@ -283,53 +283,45 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                     <svg class="connection-lines">
                         <!-- Storage line -->
                         ${storagePos && centralPos ? svg`
-                            <!-- Line from storage center to central node center -->
-                            <line class="connection-line" 
-                                  x1="${storagePos.x || 0}" y1="${storagePos.y || 0}" 
-                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
-                                  style="stroke: green; stroke-width: 3px;">
-                            </line>
+                            <path class="connection-line" 
+                                  d="M ${storagePos.x || 0} ${storagePos.y || 0} 
+                                     L ${centralPos.x || 0} ${centralPos.y || 0}"
+                                  style="stroke: green; stroke-width: 3px; fill: none;">
+                            </path>
                         ` : svg`<!-- No storage/central positions yet -->`}
                         
                         <!-- Grid line -->
                         ${centralPos && gridPos ? svg`
-                            <!-- Line from central node center to grid center -->
-                            <line class="connection-line" 
-                                  x1="${centralPos.x || 0}" y1="${centralPos.y || 0}" 
-                                  x2="${gridPos.x || 0}" y2="${gridPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px;">
-                            </line>
+                            <path class="connection-line" 
+                                  d="M ${centralPos.x || 0} ${centralPos.y || 0} 
+                                     L ${gridPos.x || 0} ${gridPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                            </path>
                         ` : svg`<!-- No central/grid positions yet -->`}
                        
                         <!-- Producer lines -->
                         ${centralPos && producerPos ? svg`
-                            <!-- Line from central node center to grid center -->
-                            <line class="connection-line" 
-                                  x1="${producerPos.x || 0}" y1="${producerPos.y || 0}" 
-                                  x2="${producerPos.x + 0.5 * (centralPos.x - producerPos.x) || 0}" y2="${producerPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px;">
-                            </line>
-                            <line class="connection-line" 
-                                  x1="${producerPos.x + 0.5 * (centralPos.x - producerPos.x) || 0}" y1="${producerPos.y || 0}" 
-                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px;">
-                            </line>
-                        ` : svg`<!-- No central/grid positions yet -->`}
+                            <path class="connection-line" 
+                                  d="M ${producerPos.x || 0} ${producerPos.y || 0} 
+                                     L ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x) - 10) || 0} ${producerPos.y || 0}
+                                     Q ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x)) || 0} ${producerPos.y || 0} 
+                                       ${(producerPos.x + 0.5 * (centralPos.x - producerPos.x) + 10) || 0} ${(producerPos.y + 10 * Math.sign((centralPos.y || 0) - (producerPos.y || 0))) || 0}
+                                     L ${centralPos.x || 0} ${centralPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                            </path>
+                        ` : svg`<!-- No central/producer positions yet -->`}
 
                         <!-- Consumer lines -->
                         ${centralPos && consumerPos ? svg`
-                            <!-- Line from central node center to grid center -->
-                            <line class="connection-line" 
-                                  x1="${consumerPos.x || 0}" y1="${consumerPos.y || 0}" 
-                                  x2="${consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) || 0}" y2="${consumerPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px;">
-                            </line>
-                            <line class="connection-line" 
-                                  x1="${consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) || 0}" y1="${consumerPos.y || 0}" 
-                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
-                                  style="stroke: blue; stroke-width: 3px;">
-                            </line>
-                        ` : svg`<!-- No central/grid positions yet -->`}
+                            <path class="connection-line" 
+                                  d="M ${consumerPos.x || 0} ${consumerPos.y || 0} 
+                                     L ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) - 10) || 0} ${consumerPos.y || 0}
+                                     Q ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x)) || 0} ${consumerPos.y || 0} 
+                                       ${(consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) + 10) || 0} ${(consumerPos.y + 10 * Math.sign((centralPos.y || 0) - (consumerPos.y || 0))) || 0}
+                                     L ${centralPos.x || 0} ${centralPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px; fill: none;">
+                            </path>
+                        ` : svg`<!-- No central/consumer positions yet -->`}
                     </svg>
                 </div>
                 
