@@ -458,7 +458,24 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 ${this._renderChart('grid', 'Grid')}
                 <!-- Central node -->
                 <div class="central-node">
-                    <or-icon icon="file-powerpoint-box-outline"></or-icon>
+                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 63%; left: 55%; transform: translate(-50%, -50%);">
+                        <path fill="white" d="
+                                M 25 20
+                                L 55 20
+                                C 65 20 70 25 70 35
+                                C 70 45 65 50 55 50
+                                L 40 50
+                                L 40 80
+                                L 25 70
+                                L 25 55
+                                L 25 35
+                                L 50 35
+                                C 52 35 53 34 53 32
+                                C 53 30 52 29 50 29
+                                L 25 29
+                                Z
+                        "/>
+                    </svg>
                 </div>
                 <div>
                     <!-- Connection lines -->
