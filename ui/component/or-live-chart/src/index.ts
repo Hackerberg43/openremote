@@ -1928,6 +1928,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 }
 
 
+// Export the or-flow-grid component
+export * from "./or-flow-grid";
+
 // Ensure component is available for import
 //declare global {
 //    interface HTMLElementTagNameMap {

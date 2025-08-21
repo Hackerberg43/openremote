@@ -111,44 +111,82 @@ export class KpiWidget extends OrAssetWidget {
                         </div>
                     `;
                 })}
-                <or-live-chart
-                        assetId="5ydJLbMubRRyPnZMJEU97v"
-                        attributeName="power"
-                        timeframe="5minutes"
-                        refreshInterval="1second"
-                        operatingStatus="running"
-                        linkUrl="http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v"
-                        statusMessage="info: Temperature approaching threshold. This is a very long message with so much content it should not even be readible by a human user because it is cutoff by this box"
-                        .additionalAttributes="${[
-                            {
-                                assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'temperature',
-                                icon: 'thermometer',
-                                upperThreshold: 50,
-                                lowerThreshold: 45
-                            },
-                            {
-                                assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'efficiencyExport',
-                                icon: 'battery',
-                                upperThreshold: 100,
-                                lowerThreshold: 30
-                            },
-                            {
-                                assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'energyExportTotal',
-                                icon: 'battery',
-                                upperThreshold: 100,
-                                lowerThreshold: 30
-                            },
-                            {
-                                assetId: '5ydJLbMubRRyPnZMJEU97v',
-                                attributeName: 'status',
-                                icon: 'connection'
-                            }
-                        ]}"
-                        style="height: 100%; width: 100%;">
-                </or-live-chart>
+                <!-- Example using or-flow-grid component -->
+                <or-flow-grid
+                    .charts="${[
+                        {
+                            position: 'producers',
+                            assetId: '5ydJLbMubRRyPnZMJEU97v',
+                            attributeName: 'power',
+                            timeframe: '5minutes',
+                            refreshInterval: '1second',
+                            operatingStatus: 'running',
+                            linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
+                            statusMessage: 'Solar panels producing energy',
+                            additionalAttributes: [
+                                {
+                                    assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                    attributeName: 'temperature',
+                                    icon: 'thermometer',
+                                    upperThreshold: 50,
+                                    lowerThreshold: 45
+                                }
+                            ]
+                        },
+                        {
+                            position: 'storage',
+                            assetId: '5ydJLbMubRRyPnZMJEU97v',
+                            attributeName: 'efficiencyExport',
+                            timeframe: '5minutes',
+                            refreshInterval: '1second',
+                            operatingStatus: 'running',
+                            linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
+                            statusMessage: 'Battery storage charging',
+                            additionalAttributes: [
+                                {
+                                    assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                    attributeName: 'status',
+                                    icon: 'battery'
+                                }
+                            ]
+                        },
+                        {
+                            position: 'consumers',
+                            assetId: '5ydJLbMubRRyPnZMJEU97v',
+                            attributeName: 'energyExportTotal',
+                            timeframe: '5minutes',
+                            refreshInterval: '1second',
+                            operatingStatus: 'running',
+                            linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
+                            statusMessage: 'Consuming energy for heating',
+                            additionalAttributes: [
+                                {
+                                    assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                    attributeName: 'temperature',
+                                    icon: 'thermometer'
+                                }
+                            ]
+                        },
+                        {
+                            position: 'grid',
+                            assetId: '5ydJLbMubRRyPnZMJEU97v',
+                            attributeName: 'power',
+                            timeframe: '5minutes',
+                            refreshInterval: '1second',
+                            operatingStatus: 'running',
+                            linkUrl: 'http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v',
+                            statusMessage: 'Connected to main grid',
+                            additionalAttributes: [
+                                {
+                                    assetId: '5ydJLbMubRRyPnZMJEU97v',
+                                    attributeName: 'status',
+                                    icon: 'connection'
+                                }
+                            ]
+                        }
+                    ]}"
+                    style="height: 100%; width: 100%;">
+                </or-flow-grid>
 
             </div>
         `;
