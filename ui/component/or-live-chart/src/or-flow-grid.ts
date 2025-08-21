@@ -1,4 +1,4 @@
-import {css, html, LitElement, PropertyValues, unsafeCSS} from "lit";
+import {css, html, svg, LitElement, PropertyValues, unsafeCSS} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
 import {translate} from "@openremote/or-translate";
 import i18next from "i18next";
@@ -54,6 +54,7 @@ const style = css`
         justify-content: center;
         width: 250px;
         height: 180px;
+        z-index: 10;
     }
 
     .chart-position or-live-chart {
@@ -188,6 +189,12 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
             positions.set('central', { x: centerX, y: centerY });
         }
 
+        // Store container dimensions for viewBox
+        positions.set('containerDimensions', { 
+            x: containerRect.width, 
+            y: containerRect.height 
+        });
+
         this._nodePositions = positions;
         this.requestUpdate();
     }
@@ -248,6 +255,18 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         const storagePos = this._nodePositions.get('storage');
         const centralPos = this._nodePositions.get('central');
         const gridPos = this._nodePositions.get('grid');
+        const producerPos = this._nodePositions.get('producers');
+        const consumerPos = this._nodePositions.get('consumers');
+        const containerDims = this._nodePositions.get('containerDimensions');
+
+        // Debug logging
+        console.log('Node positions:', {
+            storage: storagePos,
+            central: centralPos,
+            grid: gridPos,
+            containerDims,
+            mapSize: this._nodePositions.size
+        });
 
         return html`
             <div class="flow-grid-container">
@@ -255,29 +274,66 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 ${this._renderChart('storage', 'Storage')}
                 ${this._renderChart('consumers', 'Consumers')}
                 ${this._renderChart('grid', 'Grid')}
-                
-                <!-- Connection lines -->
-                <svg class="connection-lines">
-                    ${storagePos && centralPos ? html`
-                        <!-- Line from storage center to central node center -->
-                        <line class="connection-line" 
-                              x1="${storagePos.x}" y1="${storagePos.y}" 
-                              x2="${centralPos.x}" y2="${centralPos.y}">
-                        </line>
-                    ` : ''}
-                    ${centralPos && gridPos ? html`
-                        <!-- Line from central node center to grid center -->
-                        <line class="connection-line" 
-                              x1="${centralPos.x}" y1="${centralPos.y}" 
-                              x2="${gridPos.x}" y2="${gridPos.y}">
-                        </line>
-                    ` : ''}
-                </svg>
-                
                 <!-- Central node -->
                 <div class="central-node">
                     <or-icon icon="lightning-bolt"></or-icon>
                 </div>
+                <div>
+                    <!-- Connection lines -->
+                    <svg class="connection-lines">
+                        <!-- Storage line -->
+                        ${storagePos && centralPos ? svg`
+                            <!-- Line from storage center to central node center -->
+                            <line class="connection-line" 
+                                  x1="${storagePos.x || 0}" y1="${storagePos.y || 0}" 
+                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
+                                  style="stroke: green; stroke-width: 3px;">
+                            </line>
+                        ` : svg`<!-- No storage/central positions yet -->`}
+                        
+                        <!-- Grid line -->
+                        ${centralPos && gridPos ? svg`
+                            <!-- Line from central node center to grid center -->
+                            <line class="connection-line" 
+                                  x1="${centralPos.x || 0}" y1="${centralPos.y || 0}" 
+                                  x2="${gridPos.x || 0}" y2="${gridPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px;">
+                            </line>
+                        ` : svg`<!-- No central/grid positions yet -->`}
+                       
+                        <!-- Producer lines -->
+                        ${centralPos && producerPos ? svg`
+                            <!-- Line from central node center to grid center -->
+                            <line class="connection-line" 
+                                  x1="${producerPos.x || 0}" y1="${producerPos.y || 0}" 
+                                  x2="${producerPos.x + 0.5 * (centralPos.x - producerPos.x) || 0}" y2="${producerPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px;">
+                            </line>
+                            <line class="connection-line" 
+                                  x1="${producerPos.x + 0.5 * (centralPos.x - producerPos.x) || 0}" y1="${producerPos.y || 0}" 
+                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px;">
+                            </line>
+                        ` : svg`<!-- No central/grid positions yet -->`}
+
+                        <!-- Consumer lines -->
+                        ${centralPos && consumerPos ? svg`
+                            <!-- Line from central node center to grid center -->
+                            <line class="connection-line" 
+                                  x1="${consumerPos.x || 0}" y1="${consumerPos.y || 0}" 
+                                  x2="${consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) || 0}" y2="${consumerPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px;">
+                            </line>
+                            <line class="connection-line" 
+                                  x1="${consumerPos.x + 0.5 * (centralPos.x - consumerPos.x) || 0}" y1="${consumerPos.y || 0}" 
+                                  x2="${centralPos.x || 0}" y2="${centralPos.y || 0}"
+                                  style="stroke: blue; stroke-width: 3px;">
+                            </line>
+                        ` : svg`<!-- No central/grid positions yet -->`}
+                    </svg>
+                </div>
+                
+                
                 
             </div>
         `;
