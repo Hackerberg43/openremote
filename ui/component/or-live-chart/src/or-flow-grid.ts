@@ -106,7 +106,7 @@ const style = css`
         transform: translate(-50%, -50%);
         width: 80px;
         height: 80px;
-        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        background: linear-gradient(135deg, #2196F3 0%, #035dbc 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -458,7 +458,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 ${this._renderChart('grid', 'Grid')}
                 <!-- Central node -->
                 <div class="central-node">
-                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 63%; left: 55%; transform: translate(-50%, -50%);">
+                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 64%; left: 55%; transform: translate(-50%, -50%);">
                         <path fill="white" d="
                                 M 25 20
                                 L 55 20
