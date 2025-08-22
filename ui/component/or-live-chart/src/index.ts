@@ -520,64 +520,6 @@ const style = css`
         visibility: visible;
     }
 
-    .custom-confirm-dialog {
-        position: fixed;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        padding: 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        white-space: nowrap;
-        z-index: 2000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        pointer-events: auto;
-        min-width: 200px;
-    }
-
-    .custom-confirm-dialog.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .confirm-message {
-        margin-bottom: 12px;
-        font-weight: 500;
-    }
-
-    .confirm-buttons {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-    }
-
-    .confirm-button {
-        padding: 6px 12px;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        border-radius: 4px;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        cursor: pointer;
-        font-size: 12px;
-        transition: background-color 0.2s;
-    }
-
-    .confirm-button:hover {
-        background: rgba(76, 76, 76, 0.1);
-    }
-
-    .confirm-button.primary {
-        background: #4CAF50;
-        color: white;
-        border-color: #4CAF50;
-    }
-
-    .confirm-button.primary:hover {
-        background: #45a049;
-    }
 `;
 
 @customElement("or-live-chart")
@@ -670,12 +612,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _tooltipTimeout?: ReturnType<typeof setTimeout>;
     protected _globalTouchHandler?: (e: TouchEvent) => void;
     protected _panelClickHandler?: (e: MouseEvent) => void;
-    protected _dialogOutsideClickHandler?: (e: MouseEvent) => void;
     
-    @state()
-    protected _showConfirmDialog = false;
-    protected _confirmDialogX = 0;
-    protected _confirmDialogY = 0;
 
     constructor() {
         super();
@@ -1402,7 +1339,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._removeTooltipEventListeners();
         this._removeGlobalTouchHandler();
         this._removeClickHandler();
-        this._removeDialogOutsideClickHandler();
 
         this._data = [];
         this._lastReceivedValue = undefined;
@@ -1555,7 +1491,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     ${this._renderAdditionalAttributes()}
                 </div>
             </div>
-            ${this._showConfirmDialog ? this._renderConfirmDialog() : ''}
         `;
     }
 
@@ -1612,38 +1547,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         `;
     }
 
-    protected _renderConfirmDialog() {
-        // Position dialog near cursor but ensure it stays within viewport
-        const dialogWidth = 250;
-        const dialogHeight = 80;
-        let left = this._confirmDialogX - dialogWidth / 2;
-        let top = this._confirmDialogY + 20;
-
-        // Adjust horizontal position to stay in viewport
-        if (left < 10) left = 10;
-        if (left + dialogWidth > window.innerWidth - 10) {
-            left = window.innerWidth - dialogWidth - 10;
-        }
-
-        // Adjust vertical position to stay in viewport
-        if (top + dialogHeight > window.innerHeight - 10) {
-            top = this._confirmDialogY - dialogHeight - 20; // Position above cursor
-        }
-
-        return html`
-            <div 
-                class="custom-confirm-dialog visible" 
-                style="left: ${left}px; top: ${top}px;">
-                <div class="confirm-message">
-                    Go to asset?
-                </div>
-                <div class="confirm-buttons">
-                    <button class="confirm-button" @click="${this._onConfirmCancel}">Cancel</button>
-                    <button class="confirm-button primary" @click="${this._onConfirmOpen}">Open</button>
-                </div>
-            </div>
-        `;
-    }
 
     protected _toggleChartEventListeners(connect: boolean){
         if (connect) {
@@ -1835,25 +1738,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._removeClickHandler();
 
         this._panelClickHandler = (e: MouseEvent) => {
-            // Check if click was on a tooltip trigger element
-            const target = e.target as HTMLElement;
-            
-            // Skip if clicking on tooltip trigger areas
-            if (target.closest('.status-indicator') || 
-                target.closest('.status-message-container') || 
-                target.closest('.additional-attributes')) {
-                return;
+            // Show browser confirmation dialog
+            if (confirm('Browse to this asset?')) {
+                window.open(this.linkUrl, '_blank');
             }
-
-            // Show custom confirmation dialog near cursor
-            this._confirmDialogX = e.clientX;
-            this._confirmDialogY = e.clientY;
-            this._showConfirmDialog = true;
-            
-            // Setup click-outside handler after a small delay to avoid immediate dismissal
-            setTimeout(() => {
-                this._setupDialogOutsideClickHandler();
-            }, 100);
         };
 
         panel.addEventListener('click', this._panelClickHandler);
@@ -1866,41 +1754,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    protected _onConfirmOpen() {
-        if (this.linkUrl) {
-            window.open(this.linkUrl, '_blank');
-        }
-        this._hideConfirmDialog();
-    }
-
-    protected _onConfirmCancel() {
-        this._hideConfirmDialog();
-    }
-
-    protected _hideConfirmDialog() {
-        this._showConfirmDialog = false;
-        this._removeDialogOutsideClickHandler();
-    }
-
-    protected _setupDialogOutsideClickHandler() {
-        if (this._dialogOutsideClickHandler) return; // Already setup
-
-        this._dialogOutsideClickHandler = (e: MouseEvent) => {
-            const dialog = this.shadowRoot?.querySelector('.custom-confirm-dialog') as HTMLElement;
-            if (dialog && !dialog.contains(e.target as Node)) {
-                this._hideConfirmDialog();
-            }
-        };
-
-        document.addEventListener('click', this._dialogOutsideClickHandler);
-    }
-
-    protected _removeDialogOutsideClickHandler() {
-        if (this._dialogOutsideClickHandler) {
-            document.removeEventListener('click', this._dialogOutsideClickHandler);
-            this._dialogOutsideClickHandler = undefined;
-        }
-    }
 
     protected _positionTooltipWithinFrame(tooltip: HTMLElement, cursorX: number, cursorY: number) {
         const panelRect = this._panelElem?.getBoundingClientRect();
