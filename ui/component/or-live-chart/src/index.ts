@@ -295,7 +295,7 @@ const style = css`
         }
         50% {
             border-color: rgba(244, 67, 54, 1);
-            background-color: rgba(244, 67, 54, 0.1);
+            background-color: color-mix(in srgb, var(--internal-or-live-chart-background-color) 90%, rgba(244, 67, 54, 1) 10%);
         }
         100% {
             border-color: var(--internal-or-live-chart-border-color);
