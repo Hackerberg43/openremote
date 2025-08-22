@@ -52,6 +52,18 @@ const style = css`
         padding: 40px;
         background: var(--internal-or-flow-grid-background-color);
         align-items: center;
+        transform-origin: center center;
+        min-width: 800px;
+        min-height: 740px;
+    }
+
+    .flow-grid-wrapper {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .chart-position {
@@ -100,10 +112,10 @@ const style = css`
 
     /* Central node */
     .central-node {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: center;
+        align-self: center;
         width: 80px;
         height: 80px;
         background: linear-gradient(135deg, #2196F3 0%, #035dbc 100%);
@@ -118,15 +130,15 @@ const style = css`
 
     @keyframes heartbeat {
         0%, 90%, 100% {
-            transform: translate(-50%, -50%) scale(1);
+            transform: scale(1);
             box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
         }
         20% {
-            transform: translate(-50%, -50%) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
         }
         50% {
-            transform: translate(-50%, -50%) scale(1);
+            transform: scale(1);
             box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
         }
     }
@@ -145,7 +157,7 @@ const style = css`
         width: 100%;
         height: 100%;
         pointer-events: none;
-        z-index: 5;
+        z-index: 1000;
     }
 
     .connection-line {
@@ -242,9 +254,39 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
     @state()
     private _nodePositions: Map<string, {x: number, y: number}> = new Map();
 
+    @state()
+    private _scaleFactor: number = 1;
+
+    private _resizeObserver?: ResizeObserver;
+    private _mutationObserver?: MutationObserver;
+    private _recalculateTimeout?: number;
+
+    private _calculateScaleFactor() {
+        const host = this.shadowRoot?.host as HTMLElement;
+        if (!host) return;
+
+        const hostRect = host.getBoundingClientRect();
+        const minWidth = 800;  // Minimum required width (300 + gap + central area + gap + 300)
+        
+        // Calculate minimum height needed for 3 charts stacked vertically
+        // 3 charts × 180px + 2 gaps × 40px + top/bottom padding × 40px = 740px
+        const minHeight = (3 * 180) + (2 * 40) + (2 * 40); // 740px
+
+        // Calculate scale factors for both dimensions
+        const scaleX = hostRect.width < minWidth ? hostRect.width / minWidth : 1;
+        const scaleY = hostRect.height < minHeight ? hostRect.height / minHeight : 1;
+
+        // Use the smaller scale factor to maintain aspect ratio
+        this._scaleFactor = Math.min(scaleX, scaleY, 1);
+        this.requestUpdate();
+    }
+
     protected _calculateNodeCenters() {
         const container = this.shadowRoot?.querySelector('.flow-grid-container') as HTMLElement;
         if (!container) return;
+
+        // Update scale factor first
+        this._calculateScaleFactor();
 
         const containerRect = container.getBoundingClientRect();
         const positions = new Map<string, {x: number, y: number}>();
@@ -256,8 +298,11 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
             const chartElement = container.querySelector(`.chart-position.${position}`) as HTMLElement;
             if (chartElement) {
                 const rect = chartElement.getBoundingClientRect();
+                
+                // Calculate center point relative to container (since SVG is now inside the scaled container)
                 const centerX = rect.left + rect.width / 2 - containerRect.left;
                 const centerY = rect.top + rect.height / 2 - containerRect.top;
+                
                 positions.set(position, { x: centerX, y: centerY });
             }
         });
@@ -266,8 +311,11 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         const centralNode = container.querySelector('.central-node') as HTMLElement;
         if (centralNode) {
             const rect = centralNode.getBoundingClientRect();
+            
+            // Calculate center point relative to container (since SVG is now inside the scaled container)
             const centerX = rect.left + rect.width / 2 - containerRect.left;
             const centerY = rect.top + rect.height / 2 - containerRect.top;
+            
             positions.set('central', { x: centerX, y: centerY });
         }
 
@@ -283,18 +331,99 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
 
     private _resizeHandler = () => this._calculateNodeCenters();
 
+    private _throttledRecalculate = () => {
+        if (this._recalculateTimeout) {
+            clearTimeout(this._recalculateTimeout);
+        }
+        this._recalculateTimeout = window.setTimeout(() => {
+            this._calculateNodeCenters();
+        }, 16); // ~60fps throttling
+    };
+
+    private _setupObservers() {
+        const container = this.shadowRoot?.querySelector('.flow-grid-container') as HTMLElement;
+        const host = this.shadowRoot?.host as HTMLElement;
+        if (!container || !host) return;
+
+        // Observe container and host size changes
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+        }
+        this._resizeObserver = new ResizeObserver(() => {
+            this._throttledRecalculate();
+        });
+        this._resizeObserver.observe(container);
+        this._resizeObserver.observe(host); // Monitor host size for scaling
+
+        // Observe chart elements for size changes
+        const chartElements = container.querySelectorAll('.chart-position');
+        chartElements.forEach(element => {
+            if (this._resizeObserver) {
+                this._resizeObserver.observe(element as HTMLElement);
+            }
+        });
+
+        // Observe for DOM mutations (content changes in charts)
+        if (this._mutationObserver) {
+            this._mutationObserver.disconnect();
+        }
+        this._mutationObserver = new MutationObserver(() => {
+            this._throttledRecalculate();
+        });
+        
+        // Watch for changes in chart content
+        const orLiveCharts = container.querySelectorAll('or-live-chart');
+        orLiveCharts.forEach(chart => {
+            if (this._mutationObserver) {
+                this._mutationObserver.observe(chart, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+            }
+        });
+    }
+
     protected firstUpdated(changedProperties: PropertyValues) {
         super.firstUpdated(changedProperties);
         // Calculate positions after initial render
-        setTimeout(() => this._calculateNodeCenters(), 0);
+        setTimeout(() => {
+            this._calculateNodeCenters();
+            this._setupObservers();
+        }, 0);
         
         // Recalculate on window resize
         window.addEventListener('resize', this._resizeHandler);
     }
 
+    protected updated(changedProperties: PropertyValues) {
+        super.updated(changedProperties);
+        
+        // Recalculate positions when charts or flow values change
+        if (changedProperties.has('charts') || changedProperties.has('flowValues')) {
+            // Delay to ensure DOM has updated
+            setTimeout(() => {
+                this._calculateNodeCenters();
+                this._setupObservers(); // Re-setup observers for new chart elements
+            }, 0);
+        }
+    }
+
     disconnectedCallback() {
         super.disconnectedCallback();
         window.removeEventListener('resize', this._resizeHandler);
+        
+        // Clean up observers
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+        }
+        if (this._mutationObserver) {
+            this._mutationObserver.disconnect();
+        }
+        if (this._recalculateTimeout) {
+            clearTimeout(this._recalculateTimeout);
+        }
     }
 
     protected _getChartByPosition(position: FlowGridChart['position']): FlowGridChart | undefined {
@@ -446,19 +575,21 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
             storage: storagePos,
             central: centralPos,
             grid: gridPos,
-            containerDims,
+            producers: producerPos,
+            consumers: consumerPos,
             mapSize: this._nodePositions.size
         });
 
         return html`
-            <div class="flow-grid-container">
+            <div class="flow-grid-wrapper">
+                <div class="flow-grid-container" style="transform: scale(${this._scaleFactor})">
                 ${this._renderChart('producers', 'Producers')}
                 ${this._renderChart('storage', 'Storage')}
                 ${this._renderChart('consumers', 'Consumers')}
                 ${this._renderChart('grid', 'Grid')}
                 <!-- Central node -->
                 <div class="central-node">
-                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="position: absolute; top: 64%; left: 55%; transform: translate(-50%, -50%);">
+                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
                         <!-- Shadow/outline path -->
                         <path fill="none" stroke="rgba(0, 0, 0, 0.2)" stroke-width="10" d="
                                 M 25 20
@@ -495,9 +626,10 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                         "/>
                     </svg>
                 </div>
-                <div>
-                    <!-- Connection lines -->
-                    <svg class="connection-lines">
+                
+                <!-- Connection lines -->
+                <svg class="connection-lines" 
+                     viewBox="0 0 ${containerDims?.x || 800} ${containerDims?.y || 740}">
                         <defs>
                             <!-- Define paths for animation -->
                             ${storagePos && centralPos ? svg`
@@ -584,6 +716,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 
                 
                 
+                </div>
             </div>
         `;
     }
