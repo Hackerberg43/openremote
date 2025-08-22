@@ -114,12 +114,12 @@ export class OrLiveChartCurrentValue extends LitElement {
             }
             .current-value-number {
                 color: var(--internal-or-live-chart-text-color, #333);
-                font-size: 32px;
+                font-size: var(--current-value-font-size, 32px);
                 font-weight: bold;
             }
             .current-value-unit {
                 color: var(--internal-or-live-chart-text-color, #333);
-                font-size: 32px;
+                font-size: var(--current-value-font-size, 32px);
                 font-weight: 200;
                 margin-left: 5px;
             }
@@ -242,8 +242,27 @@ const style = css`
         display: flex;
         align-items: end;
         padding-left: 5px;
-        padding-top: 20px;
+        padding-top: 5px;
         flex-direction: column;
+    }
+
+    .main-group.expanded {
+        flex: 1;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .main-group.expanded or-live-chart-current-value {
+        --current-value-font-size: 40px;
+    }
+
+    .main-group.expanded .status-indicator {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .main-group.expanded .status-message-container {
+        margin-top: 10px;
     }
 
     .status-indicator {
@@ -598,6 +617,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @property({type: String})
     public linkUrl?: string;
 
+    @property({type: Boolean})
+    public showChart = true;
+
     @state()
     protected _loading = false;
 
@@ -701,12 +723,21 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._updateErrorStatus();
         }
 
+        if (changedProperties.has("showChart")) {
+            if (this.showChart && this._data.length > 0 && !this._chart && this._chartElem) {
+                this._initializeChart();
+            } else if (!this.showChart && this._chart) {
+                this._chart.dispose();
+                this._chart = undefined;
+            }
+        }
+
         if (reloadData) {
             this._cleanup();
             if (this.assetId && this.attributeName) {
                 this._loadData();
             }
-        } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem) {
+        } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem && this.showChart) {
             this._initializeChart();
         }
         
@@ -813,10 +844,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 y: dp.y !== null && dp.y !== undefined ? dp.y : null
             }));
             console.log("Data queried:", this._data);
-            // Initialize chart if not already done
-            if (!this._chart && this._chartElem) {
+            // Initialize chart if not already done and chart is enabled
+            if (!this._chart && this._chartElem && this.showChart) {
                 this._initializeChart();
-            } else {
+            } else if (this.showChart) {
                 this._updateChart();
             }
         }
@@ -1221,8 +1252,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 const cutoffTime = now - this._timeframeMs;
                 this._data = [...this._data.filter(dp => dp.x >= cutoffTime), newDataPoint];
 
-                // Update chart
-                this._updateChart();
+                // Update chart only if chart is enabled
+                if (this.showChart) {
+                    this._updateChart();
+                }
             }
         }, this._refreshIntervalMs);
     }
@@ -1235,7 +1268,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _initializeChart() {
-        if (!this._chartElem) return;
+        if (!this._chartElem || !this.showChart) return;
 
         this._chart = echarts.init(this._chartElem);
 
@@ -1292,7 +1325,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _updateChart() {
-        if (!this._chart || this._data.length === 0) return;
+        if (!this._chart || this._data.length === 0 || !this.showChart) return;
 
         const seriesData = this._data.map(dp => [dp.x, dp.y]);
         const now = Date.now();
@@ -1447,10 +1480,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return html`
             <div class="panel ${this._hasErrorStatus ? 'error' : ''}">
                 <div class="panel-content">
-                    <div class="chart-container">
-                        <div id="chart"></div>
-                    </div>
-                    <div class="main-group">
+                    ${this.showChart ? html`
+                        <div class="chart-container">
+                            <div id="chart"></div>
+                        </div>
+                    ` : ''}
+                    <div class="main-group ${!this.showChart ? 'expanded' : ''}">
                         <div class="status-indicator">
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
                             <span>${this._isLive ? 'Connected' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
