@@ -231,8 +231,9 @@ const style = css`
 
 
     .chart-label or-icon {
-        --or-icon-width: 16px;
-        --or-icon-height: 16px;
+        --or-icon-width: 20px;
+        --or-icon-height: 20px;
+        margin-top: 2px;
     }
 
     .chart-label.producers or-icon {
@@ -623,6 +624,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                     .timeframe="${chart.timeframe || '30minutes'}"
                     .refreshInterval="${chart.refreshInterval || '1minute'}"
                     .operatingStatus="${chart.operatingStatus}"
+                    .showChart="${false}"
                     .linkUrl="${chart.linkUrl}"
                     .statusMessage="${chart.statusMessage}"
                     .additionalAttributes="${chart.additionalAttributes || []}">
