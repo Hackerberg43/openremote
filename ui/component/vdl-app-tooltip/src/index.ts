@@ -91,7 +91,7 @@ export class VdlAppTooltip extends LitElement {
                 pointer-events: none;
                 opacity: 0;
                 visibility: hidden;
-                transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+                transition: opacity 1s ease-in-out, visibility 1s ease-in-out;
             }
 
             :host([visible]) {
@@ -101,7 +101,7 @@ export class VdlAppTooltip extends LitElement {
 
             .tooltip-container {
                 background: var(--internal-vdl-app-tooltip-background-color);
-                color: white;
+                color: var(--internal-vdl-app-tooltip-text-color);
                 padding: 12px;
                 border-radius: 6px;
                 font-size: 14px;
@@ -126,7 +126,7 @@ export class VdlAppTooltip extends LitElement {
                 transform: translateX(-50%);
                 border-left: 8px solid transparent;
                 border-right: 8px solid transparent;
-                border-bottom: 8px solid rgba(0, 0, 0, 0.9);
+                border-bottom: 8px solid var(--internal-vdl-app-tooltip-border-color);
             }
 
             /* Position variants */
@@ -134,20 +134,20 @@ export class VdlAppTooltip extends LitElement {
             :host([position="bottom"]) .tooltip-container::before {
                 top: -8px;
                 border-top: none;
-                border-bottom: 8px solid rgba(0, 0, 0, 0.9);
+                border-bottom: 8px solid var(--internal-vdl-app-tooltip-border-color);
             }
 
             :host([position="top"]) .tooltip-container::before {
                 top: 100%;
                 border-bottom: none;
-                border-top: 8px solid rgba(0, 0, 0, 0.9);
+                border-top: 8px solid var(--internal-vdl-app-tooltip-border-color);
             }
 
             :host([position="left"]) .tooltip-container::before {
                 top: 50%;
                 left: 100%;
                 transform: translateY(-50%);
-                border-left: 8px solid rgba(0, 0, 0, 0.9);
+                border-left: 8px solid var(--internal-vdl-app-tooltip-border-color);
                 border-right: none;
                 border-top: 8px solid transparent;
                 border-bottom: 8px solid transparent;
@@ -157,7 +157,7 @@ export class VdlAppTooltip extends LitElement {
                 top: 50%;
                 left: -8px;
                 transform: translateY(-50%);
-                border-right: 8px solid rgba(0, 0, 0, 0.9);
+                border-right: 8px solid var(--internal-vdl-app-tooltip-border-color);
                 border-left: none;
                 border-top: 8px solid transparent;
                 border-bottom: 8px solid transparent;

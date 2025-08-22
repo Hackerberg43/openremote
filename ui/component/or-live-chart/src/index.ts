@@ -1520,7 +1520,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _getStatusMessageTooltipContent() {
         return html`
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: white;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
                 Message
             </div>
             ${this.statusMessage ? html`
@@ -1550,7 +1550,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _getStatusIndicatorTooltipContent() {
         return html`
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: white;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
                 Connection
             </div>
             <div>
@@ -1568,7 +1568,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _getAdditionalAttributesTooltipContent() {
         return html`
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: white;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
                 Device Attributes
             </div>
             <div>

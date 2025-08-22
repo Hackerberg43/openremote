@@ -12,7 +12,7 @@ task installDist() {
     dependsOn npmAnalyze
 }
 
-npmAnalyze.dependsOn ':ui:component:or-mwc-components:npmAnalyze', ':ui:component:or-components:npmAnalyze', ':ui:component:or-icon:npmAnalyze', ':ui:component:or-translate:npmAnalyze'
+npmAnalyze.dependsOn ':ui:component:or-mwc-components:npmAnalyze', ':ui:component:or-components:npmAnalyze', ':ui:component:or-icon:npmAnalyze', ':ui:component:or-translate:npmAnalyze', ':ui:component:vdl-app-tooltip:npmAnalyze'
 
 task prepareUi() {
     dependsOn clean, npmAnalyze, npmPrepare

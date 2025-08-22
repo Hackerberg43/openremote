@@ -8,4 +8,13 @@
   "include": [
     "./src"
   ],
+  "references": [
+    { "path": "../core" },
+    { "path": "../model" },
+    { "path": "../or-components" },
+    { "path": "../or-icon" },
+    { "path": "../or-mwc-components" },
+    { "path": "../or-translate" },
+    { "path": "../vdl-app-tooltip" }
+  ]
 }
