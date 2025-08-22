@@ -1,0 +1,29 @@
+{
+  "name": "@openremote/vdl-app-tooltip",
+  "version": "1.8.0-snapshot",
+  "description": "Global app-wide tooltip component for OpenRemote",
+  "customElements": "custom-elements.json",
+  "main": "dist/umd/index.bundle.js",
+  "module": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./*": "./lib/*.js"
+  },
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "analyze": "npx cem analyze --config ../custom-elements-manifest.config.mjs",
+    "test": "echo \"No tests\" && exit 0",
+    "prepack": "npx rspack"
+  },
+  "author": "OpenRemote",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "lit": "^3.1.0"
+  },
+  "devDependencies": {
+    "@openremote/util": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
