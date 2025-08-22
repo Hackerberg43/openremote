@@ -1747,6 +1747,7 @@ __metadata:
     "@openremote/or-mwc-components": "workspace:*"
     "@openremote/or-translate": "workspace:*"
     "@openremote/util": "workspace:*"
+    "@openremote/vdl-app-tooltip": "workspace:*"
     echarts: "npm:^5.6.0"
     lit: "npm:^2.0.2"
     moment: "npm:^2.29.4"
@@ -1994,6 +1995,15 @@ __metadata:
     webpack: "npm:^5.99.8"
   bin:
     orutil: ./cli.js
+  languageName: unknown
+  linkType: soft
+
+"@openremote/vdl-app-tooltip@workspace:*, @openremote/vdl-app-tooltip@workspace:ui/component/vdl-app-tooltip":
+  version: 0.0.0-use.local
+  resolution: "@openremote/vdl-app-tooltip@workspace:ui/component/vdl-app-tooltip"
+  dependencies:
+    "@openremote/util": "workspace:*"
+    lit: "npm:^3.1.0"
   languageName: unknown
   linkType: soft
 
@@ -6581,6 +6591,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lit@npm:^3.1.0, lit@npm:^3.3.1":
+  version: 3.3.1
+  resolution: "lit@npm:3.3.1"
+  dependencies:
+    "@lit/reactive-element": "npm:^2.1.0"
+    lit-element: "npm:^4.2.0"
+    lit-html: "npm:^3.3.0"
+  checksum: 10c0/9f3e171e211be7cd3e01693eac4ba4752fc7bafebc8298fc5b9cb70ff279dd4dc292f1cb425ca42f61c3767a75b7557295c2f6b16335719bc8cf1ca6f3622fb7
+  languageName: node
+  linkType: hard
+
 "lit@npm:^3.2.1":
   version: 3.2.1
   resolution: "lit@npm:3.2.1"
@@ -6589,17 +6610,6 @@ __metadata:
     lit-element: "npm:^4.1.0"
     lit-html: "npm:^3.2.0"
   checksum: 10c0/064a31459fe54ad052c0685d058dd5aef089ddc97a247888ef91a0356dfef60c8cc531e48077bbd2cb4e9f48cb86f0ff0951bb535f1d9f144d2351f253291f66
-  languageName: node
-  linkType: hard
-
-"lit@npm:^3.3.1":
-  version: 3.3.1
-  resolution: "lit@npm:3.3.1"
-  dependencies:
-    "@lit/reactive-element": "npm:^2.1.0"
-    lit-element: "npm:^4.2.0"
-    lit-html: "npm:^3.3.0"
-  checksum: 10c0/9f3e171e211be7cd3e01693eac4ba4752fc7bafebc8298fc5b9cb70ff279dd4dc292f1cb425ca42f61c3767a75b7557295c2f6b16335719bc8cf1ca6f3622fb7
   languageName: node
   linkType: hard
 

@@ -19,6 +19,7 @@ import "@openremote/or-components/or-loading-indicator";
 import "@openremote/or-translate";
 import "@openremote/or-icon";
 import {OrIcon} from "@openremote/or-icon";
+import {showTooltip, hideTooltip} from "@openremote/vdl-app-tooltip";
 import * as echarts from "echarts/core";
 import {LineChart, LineSeriesOption} from "echarts/charts";
 import {GridComponent, TooltipComponent, GridComponentOption, TooltipComponentOption} from "echarts/components";
@@ -114,12 +115,12 @@ export class OrLiveChartCurrentValue extends LitElement {
             }
             .current-value-number {
                 color: var(--internal-or-live-chart-text-color, #333);
-                font-size: 32px;
+                font-size: var(--current-value-font-size, 32px);
                 font-weight: bold;
             }
             .current-value-unit {
                 color: var(--internal-or-live-chart-text-color, #333);
-                font-size: 32px;
+                font-size: var(--current-value-font-size, 32px);
                 font-weight: 200;
                 margin-left: 5px;
             }
@@ -242,8 +243,27 @@ const style = css`
         display: flex;
         align-items: end;
         padding-left: 5px;
-        padding-top: 20px;
+        padding-top: 5px;
         flex-direction: column;
+    }
+
+    .main-group.expanded {
+        flex: 1;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .main-group.expanded or-live-chart-current-value {
+        --current-value-font-size: 40px;
+    }
+
+    .main-group.expanded .status-indicator {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .main-group.expanded .status-message-container {
+        margin-top: 10px;
     }
 
     .status-indicator {
@@ -377,24 +397,6 @@ const style = css`
         --or-icon-fill: #F44336;
     }
 
-    .status-message-tooltip {
-        position: fixed;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 16px;
-        white-space: normal;
-        max-width: 300px;
-        word-wrap: break-word;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-    }
 
     .tooltip-title {
         font-weight: bold;
@@ -443,122 +445,19 @@ const style = css`
         font-weight: normal;
     }
 
-    .status-message-container:hover .status-message-tooltip {
-        opacity: 1;
-        visibility: visible;
-    }
 
-    .status-indicator-tooltip {
-        position: fixed;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        white-space: normal;
-        max-width: 300px;
-        word-wrap: break-word;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-    }
-
-    .status-indicator:hover .status-indicator-tooltip {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .additional-attributes-tooltip {
-        position: fixed;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        white-space: normal;
-        width: 300px;
-        word-wrap: break-word;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-    }
-
-    .additional-attributes {
-        position: relative;
+    .status-indicator {
         cursor: help;
     }
 
-    .additional-attributes:hover .additional-attributes-tooltip {
-        opacity: 1;
-        visibility: visible;
+    .status-message-container {
+        cursor: help;
     }
 
-    .custom-confirm-dialog {
-        position: fixed;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        padding: 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        white-space: nowrap;
-        z-index: 2000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        pointer-events: auto;
-        min-width: 200px;
+    .additional-attributes {
+        cursor: help;
     }
 
-    .custom-confirm-dialog.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .confirm-message {
-        margin-bottom: 12px;
-        font-weight: 500;
-    }
-
-    .confirm-buttons {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-    }
-
-    .confirm-button {
-        padding: 6px 12px;
-        border: 1px solid var(--internal-or-live-chart-border-color);
-        border-radius: 4px;
-        background: var(--internal-or-live-chart-background-color);
-        color: var(--internal-or-live-chart-text-color);
-        cursor: pointer;
-        font-size: 12px;
-        transition: background-color 0.2s;
-    }
-
-    .confirm-button:hover {
-        background: rgba(76, 76, 76, 0.1);
-    }
-
-    .confirm-button.primary {
-        background: #4CAF50;
-        color: white;
-        border-color: #4CAF50;
-    }
-
-    .confirm-button.primary:hover {
-        background: #45a049;
-    }
 `;
 
 @customElement("or-live-chart")
@@ -597,6 +496,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     @property({type: String})
     public linkUrl?: string;
+
+    @property({type: Boolean})
+    public showChart = true;
 
     @state()
     protected _loading = false;
@@ -641,19 +543,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _refreshIntervalMs: number = 60 * 1000; // 1 minute default
     protected _mouseEnterHandler?: any;
     protected _mouseLeaveHandler?: any;
-    protected _tooltipMouseEnterHandler?: any;
-    protected _tooltipMouseLeaveHandler?: any;
-    protected _statusTooltipMouseEnterHandler?: any;
-    protected _activeTooltip?: HTMLElement;
-    protected _tooltipTimeout?: ReturnType<typeof setTimeout>;
     protected _globalTouchHandler?: (e: TouchEvent) => void;
     protected _panelClickHandler?: (e: MouseEvent) => void;
-    protected _dialogOutsideClickHandler?: (e: MouseEvent) => void;
     
-    @state()
-    protected _showConfirmDialog = false;
-    protected _confirmDialogX = 0;
-    protected _confirmDialogY = 0;
 
     constructor() {
         super();
@@ -701,12 +593,21 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._updateErrorStatus();
         }
 
+        if (changedProperties.has("showChart")) {
+            if (this.showChart && this._data.length > 0 && !this._chart && this._chartElem) {
+                this._initializeChart();
+            } else if (!this.showChart && this._chart) {
+                this._chart.dispose();
+                this._chart = undefined;
+            }
+        }
+
         if (reloadData) {
             this._cleanup();
             if (this.assetId && this.attributeName) {
                 this._loadData();
             }
-        } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem) {
+        } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem && this.showChart) {
             this._initializeChart();
         }
         
@@ -813,10 +714,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 y: dp.y !== null && dp.y !== undefined ? dp.y : null
             }));
             console.log("Data queried:", this._data);
-            // Initialize chart if not already done
-            if (!this._chart && this._chartElem) {
+            // Initialize chart if not already done and chart is enabled
+            if (!this._chart && this._chartElem && this.showChart) {
                 this._initializeChart();
-            } else {
+            } else if (this.showChart) {
                 this._updateChart();
             }
         }
@@ -1221,8 +1122,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 const cutoffTime = now - this._timeframeMs;
                 this._data = [...this._data.filter(dp => dp.x >= cutoffTime), newDataPoint];
 
-                // Update chart
-                this._updateChart();
+                // Update chart only if chart is enabled
+                if (this.showChart) {
+                    this._updateChart();
+                }
             }
         }, this._refreshIntervalMs);
     }
@@ -1235,7 +1138,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _initializeChart() {
-        if (!this._chartElem) return;
+        if (!this._chartElem || !this.showChart) return;
 
         this._chart = echarts.init(this._chartElem);
 
@@ -1292,7 +1195,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _updateChart() {
-        if (!this._chart || this._data.length === 0) return;
+        if (!this._chart || this._data.length === 0 || !this.showChart) return;
 
         const seriesData = this._data.map(dp => [dp.x, dp.y]);
         const now = Date.now();
@@ -1369,7 +1272,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._removeTooltipEventListeners();
         this._removeGlobalTouchHandler();
         this._removeClickHandler();
-        this._removeDialogOutsideClickHandler();
 
         this._data = [];
         this._lastReceivedValue = undefined;
@@ -1447,28 +1349,15 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         return html`
             <div class="panel ${this._hasErrorStatus ? 'error' : ''}">
                 <div class="panel-content">
-                    <div class="chart-container">
-                        <div id="chart"></div>
-                    </div>
-                    <div class="main-group">
+                    ${this.showChart ? html`
+                        <div class="chart-container">
+                            <div id="chart"></div>
+                        </div>
+                    ` : ''}
+                    <div class="main-group ${!this.showChart ? 'expanded' : ''}">
                         <div class="status-indicator">
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
                             <span>${this._isLive ? 'Connected' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
-                            <div class="status-indicator-tooltip">
-                                <div class="tooltip-title">
-                                    Connection
-                                </div>
-                                <div class="tooltip-message">
-                                    <div class="tooltip-row">
-                                        <span class="tooltip-label">Chart Timeframe:</span>
-                                        <span class="tooltip-value">${this._getTimeframeDisplay(this.timeframe)}</span>
-                                    </div>
-                                    <div class="tooltip-row">
-                                        <span class="tooltip-label">Refresh Interval:</span>
-                                        <span class="tooltip-value">${this._getRefreshIntervalDisplay(this.refreshInterval)}</span>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     <or-live-chart-current-value 
                         .asset="${this._asset}"
@@ -1485,33 +1374,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                                     <or-icon class="overlay-info-icon" icon="information"></or-icon>
                                 ` : ''}
                             </div>
-                            <div class="status-message-tooltip">
-                                ${this.statusMessage ? html`
-                                    <div class="tooltip-title">
-                                        Message
-                                    </div>
-                                    <div class="tooltip-message">
-                                        ${this.statusMessage}
-                                    </div>
-                                ` : ''}
-                                ${this.operatingStatus ? html`
-                                    <div class="tooltip-row">
-                                        <span class="tooltip-label">Operating Status:</span>
-                                        <span class="tooltip-value">
-                                            <or-icon 
-                                                icon="${this._getOperatingStatusIcon(this.operatingStatus)}"
-                                                style="--or-icon-fill: ${this._getOperatingStatusColor(this.operatingStatus)}; --or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
-                                            </or-icon>
-                                            ${this.operatingStatus}
-                                        </span>
-                                    </div>
-                                ` : ''}
-                                ${this.statusMessage ? html`
-                                    <div class="tooltip-note">
-                                        You can only clear this message in the machine.
-                                    </div>
-                                ` : ''}
-                            </div>
                         </div>
                     ` : ''}
                     </div>
@@ -1520,7 +1382,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     ${this._renderAdditionalAttributes()}
                 </div>
             </div>
-            ${this._showConfirmDialog ? this._renderConfirmDialog() : ''}
         `;
     }
 
@@ -1548,67 +1409,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         </or-live-chart-additional-attribute>
                     `;
                 })}
-                <div class="additional-attributes-tooltip">
-                    <div class="tooltip-title">
-                        Device Attributes
-                    </div>
-                    <div class="tooltip-message">
-                        ${allAttributes.map(attr => {
-                            const key = `${attr.assetId}_${attr.attributeName}`;
-                            
-                            return html`
-                                <div class="tooltip-row" data-attr-key="${key}">
-                                    <span class="tooltip-label">
-                                        <or-icon 
-                                            icon="${attr.icon}" 
-                                            style="--or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
-                                        </or-icon>
-                                        ${this._formatAttributeName(attr.attributeName)}:
-                                    </span>
-                                    <span class="tooltip-value">
-                                        <span class="attr-value">--</span><span class="attr-unit"></span>
-                                    </span>
-                                </div>
-                            `;
-                        })}
-                    </div>
-                </div>
             </div>
         `;
     }
 
-    protected _renderConfirmDialog() {
-        // Position dialog near cursor but ensure it stays within viewport
-        const dialogWidth = 250;
-        const dialogHeight = 80;
-        let left = this._confirmDialogX - dialogWidth / 2;
-        let top = this._confirmDialogY + 20;
-
-        // Adjust horizontal position to stay in viewport
-        if (left < 10) left = 10;
-        if (left + dialogWidth > window.innerWidth - 10) {
-            left = window.innerWidth - dialogWidth - 10;
-        }
-
-        // Adjust vertical position to stay in viewport
-        if (top + dialogHeight > window.innerHeight - 10) {
-            top = this._confirmDialogY - dialogHeight - 20; // Position above cursor
-        }
-
-        return html`
-            <div 
-                class="custom-confirm-dialog visible" 
-                style="left: ${left}px; top: ${top}px;">
-                <div class="confirm-message">
-                    Go to asset?
-                </div>
-                <div class="confirm-buttons">
-                    <button class="confirm-button" @click="${this._onConfirmCancel}">Cancel</button>
-                    <button class="confirm-button primary" @click="${this._onConfirmOpen}">Open</button>
-                </div>
-            </div>
-        `;
-    }
 
     protected _toggleChartEventListeners(connect: boolean){
         if (connect) {
@@ -1634,136 +1438,167 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _setupTooltipEventListeners() {
         // Setup status message tooltip
         const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
-        const tooltip = this.shadowRoot?.querySelector('.status-message-tooltip') as HTMLElement;
         
-        if (container && tooltip) {
-            this._tooltipMouseEnterHandler = (e: MouseEvent) => {
-                this._positionTooltipWithinFrame(tooltip, e.clientX, e.clientY);
+        if (container) {
+            const mouseEnterHandler = (e: MouseEvent) => {
+                const content = this._getStatusMessageTooltipContent();
+                showTooltip(content, e.clientX, e.clientY);
+            };
+            
+            const mouseLeaveHandler = () => {
+                hideTooltip();
             };
             
             const touchHandler = (e: TouchEvent) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) {
-                    this._positionTooltipWithinFrame(tooltip, touch.clientX, touch.clientY);
-                    this._showTooltip(tooltip);
+                    const content = this._getStatusMessageTooltipContent();
+                    showTooltip(content, touch.clientX, touch.clientY);
                 }
             };
             
-            container.addEventListener('mouseenter', this._tooltipMouseEnterHandler);
+            container.addEventListener('mouseenter', mouseEnterHandler);
+            container.addEventListener('mouseleave', mouseLeaveHandler);
             container.addEventListener('touchstart', touchHandler);
         }
 
         // Setup status indicator tooltip
         const statusIndicator = this.shadowRoot?.querySelector('.status-indicator') as HTMLElement;
-        const statusTooltip = this.shadowRoot?.querySelector('.status-indicator-tooltip') as HTMLElement;
         
-        if (statusIndicator && statusTooltip) {
-            this._statusTooltipMouseEnterHandler = (e: MouseEvent) => {
-                this._positionTooltipWithinFrame(statusTooltip, e.clientX, e.clientY);
+        if (statusIndicator) {
+            const statusMouseEnterHandler = (e: MouseEvent) => {
+                const content = this._getStatusIndicatorTooltipContent();
+                showTooltip(content, e.clientX, e.clientY);
+            };
+            
+            const statusMouseLeaveHandler = () => {
+                hideTooltip();
             };
             
             const statusTouchHandler = (e: TouchEvent) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) {
-                    this._positionTooltipWithinFrame(statusTooltip, touch.clientX, touch.clientY);
-                    this._showTooltip(statusTooltip);
+                    const content = this._getStatusIndicatorTooltipContent();
+                    showTooltip(content, touch.clientX, touch.clientY);
                 }
             };
             
-            statusIndicator.addEventListener('mouseenter', this._statusTooltipMouseEnterHandler);
+            statusIndicator.addEventListener('mouseenter', statusMouseEnterHandler);
+            statusIndicator.addEventListener('mouseleave', statusMouseLeaveHandler);
             statusIndicator.addEventListener('touchstart', statusTouchHandler);
         }
 
         // Setup additional attributes tooltip
         const attributesContainer = this.shadowRoot?.querySelector('.additional-attributes') as HTMLElement;
-        const attributesTooltip = this.shadowRoot?.querySelector('.additional-attributes-tooltip') as HTMLElement;
         
-        if (attributesContainer && attributesTooltip) {
-            const attributesTooltipMouseEnterHandler = (e: MouseEvent) => {
-                // Update tooltip values from the main additional attribute components
-                this._updateAdditionalAttributesTooltip();
-                this._positionTooltipWithinFrame(attributesTooltip, e.clientX, e.clientY);
+        if (attributesContainer) {
+            const attributesMouseEnterHandler = (e: MouseEvent) => {
+                const content = this._getAdditionalAttributesTooltipContent();
+                showTooltip(content, e.clientX, e.clientY);
+            };
+            
+            const attributesMouseLeaveHandler = () => {
+                hideTooltip();
             };
             
             const attributesTouchHandler = (e: TouchEvent) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) {
-                    this._updateAdditionalAttributesTooltip();
-                    this._positionTooltipWithinFrame(attributesTooltip, touch.clientX, touch.clientY);
-                    this._showTooltip(attributesTooltip);
+                    const content = this._getAdditionalAttributesTooltipContent();
+                    showTooltip(content, touch.clientX, touch.clientY);
                 }
             };
             
-            attributesContainer.addEventListener('mouseenter', attributesTooltipMouseEnterHandler);
+            attributesContainer.addEventListener('mouseenter', attributesMouseEnterHandler);
+            attributesContainer.addEventListener('mouseleave', attributesMouseLeaveHandler);
             attributesContainer.addEventListener('touchstart', attributesTouchHandler);
         }
     }
 
-    protected _updateAdditionalAttributesTooltip() {
-        // Get all tooltip rows
-        const tooltipRows = this.shadowRoot?.querySelectorAll('.additional-attributes-tooltip .tooltip-row[data-attr-key]');
-        
-        tooltipRows?.forEach(row => {
-            const key = (row as HTMLElement).getAttribute('data-attr-key');
-            if (key) {
-                // Get data directly from the values map (works for all attributes, not just visible ones)
-                const attrData = this._additionalAttributeValues.get(key);
-                
-                if (attrData) {
-                    // Update the tooltip row with values from the data map
-                    const valueSpan = row.querySelector('.attr-value') as HTMLElement;
-                    const unitSpan = row.querySelector('.attr-unit') as HTMLElement;
-                    const iconElement = row.querySelector('or-icon') as HTMLElement;
+    protected _getStatusMessageTooltipContent() {
+        return html`
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
+                Message
+            </div>
+            ${this.statusMessage ? html`
+                <div style="margin-bottom: 8px; line-height: 1.4;">
+                    ${this.statusMessage}
+                </div>
+            ` : ''}
+            ${this.operatingStatus ? html`
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="margin-right: 16px;">Operating Status:</span>
+                    <span style="text-align: right; display: flex; align-items: center; justify-content: flex-end;">
+                        <or-icon 
+                            icon="${this._getOperatingStatusIcon(this.operatingStatus)}"
+                            style="--or-icon-fill: ${this._getOperatingStatusColor(this.operatingStatus)}; --or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
+                        </or-icon>
+                        ${this.operatingStatus}
+                    </span>
+                </div>
+            ` : ''}
+            ${this.statusMessage ? html`
+                <div style="font-size: 12px; opacity: 0.7; font-style: italic; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px; margin-top: 8px;">
+                    You can only clear this message in the machine.
+                </div>
+            ` : ''}
+        `;
+    }
+
+    protected _getStatusIndicatorTooltipContent() {
+        return html`
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
+                Connection
+            </div>
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="margin-right: 16px;">Chart Timeframe:</span>
+                    <span style="text-align: right;">${this._getTimeframeDisplay(this.timeframe)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="margin-right: 16px;">Refresh Interval:</span>
+                    <span style="text-align: right;">${this._getRefreshIntervalDisplay(this.refreshInterval)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    protected _getAdditionalAttributesTooltipContent() {
+        return html`
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
+                Device Attributes
+            </div>
+            <div>
+                ${this.additionalAttributes.map(attr => {
+                    const key = `${attr.assetId}_${attr.attributeName}`;
+                    const attrData = this._additionalAttributeValues.get(key);
+                    const value = attrData?.value !== undefined ? attrData.value.toString() : '--';
+                    const unit = (typeof attrData?.value === 'string') ? '' : (attrData?.unit || '');
+                    const status = attrData?.status || 'ok';
+                    const color = status === 'error' ? '#F44336' : status === 'warning' ? '#FF9800' : '#4CAF50';
                     
-                    if (valueSpan) {
-                        valueSpan.textContent = attrData.value !== undefined ? attrData.value.toString() : '--';
-                    }
-                    if (unitSpan) {
-                        // Only show unit for numeric values
-                        unitSpan.textContent = (typeof attrData.value === 'string') ? '' : (attrData.unit || '');
-                    }
-                    if (iconElement) {
-                        const status = attrData.status || 'ok';
-                        const color = status === 'error' ? '#F44336' : status === 'warning' ? '#FF9800' : '#4CAF50';
-                        iconElement.style.setProperty('--or-icon-fill', color);
-                    }
-                }
-            }
-        });
+                    return html`
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="margin-right: 16px; display: flex; align-items: center;">
+                                <or-icon 
+                                    icon="${attr.icon}" 
+                                    style="--or-icon-fill: ${color}; --or-icon-width: 14px; --or-icon-height: 14px; margin-right: 4px;">
+                                </or-icon>
+                                ${this._formatAttributeName(attr.attributeName)}:
+                            </span>
+                            <span style="text-align: right; display: flex; align-items: center; justify-content: flex-end;">
+                                ${value}${unit}
+                            </span>
+                        </div>
+                    `;
+                })}
+            </div>
+        `;
     }
 
-    protected _showTooltip(tooltip: HTMLElement) {
-        // Hide any currently active tooltip
-        this._hideActiveTooltip();
-        
-        // Show the new tooltip
-        tooltip.style.opacity = '1';
-        tooltip.style.visibility = 'visible';
-        this._activeTooltip = tooltip;
-        
-        // Set a timeout to hide the tooltip on mobile after 3 seconds
-        if (this._isMobileDevice()) {
-            this._tooltipTimeout = setTimeout(() => {
-                this._hideActiveTooltip();
-            }, 3000);
-        }
-    }
-
-    protected _hideActiveTooltip() {
-        if (this._activeTooltip) {
-            this._activeTooltip.style.opacity = '0';
-            this._activeTooltip.style.visibility = 'hidden';
-            this._activeTooltip = undefined;
-        }
-        
-        if (this._tooltipTimeout) {
-            clearTimeout(this._tooltipTimeout);
-            this._tooltipTimeout = undefined;
-        }
-    }
 
     protected _isMobileDevice(): boolean {
         return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -1776,7 +1611,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             // Check if the touch target is outside the component
             const componentElement = this.shadowRoot?.host as HTMLElement;
             if (componentElement && !componentElement.contains(e.target as Node)) {
-                this._hideActiveTooltip();
+                hideTooltip();
             }
         };
         
@@ -1800,25 +1635,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._removeClickHandler();
 
         this._panelClickHandler = (e: MouseEvent) => {
-            // Check if click was on a tooltip trigger element
-            const target = e.target as HTMLElement;
-            
-            // Skip if clicking on tooltip trigger areas
-            if (target.closest('.status-indicator') || 
-                target.closest('.status-message-container') || 
-                target.closest('.additional-attributes')) {
-                return;
+            // Show browser confirmation dialog
+            if (confirm('Browse to this asset?')) {
+                window.open(this.linkUrl, '_blank');
             }
-
-            // Show custom confirmation dialog near cursor
-            this._confirmDialogX = e.clientX;
-            this._confirmDialogY = e.clientY;
-            this._showConfirmDialog = true;
-            
-            // Setup click-outside handler after a small delay to avoid immediate dismissal
-            setTimeout(() => {
-                this._setupDialogOutsideClickHandler();
-            }, 100);
         };
 
         panel.addEventListener('click', this._panelClickHandler);
@@ -1831,99 +1651,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    protected _onConfirmOpen() {
-        if (this.linkUrl) {
-            window.open(this.linkUrl, '_blank');
-        }
-        this._hideConfirmDialog();
-    }
 
-    protected _onConfirmCancel() {
-        this._hideConfirmDialog();
-    }
-
-    protected _hideConfirmDialog() {
-        this._showConfirmDialog = false;
-        this._removeDialogOutsideClickHandler();
-    }
-
-    protected _setupDialogOutsideClickHandler() {
-        if (this._dialogOutsideClickHandler) return; // Already setup
-
-        this._dialogOutsideClickHandler = (e: MouseEvent) => {
-            const dialog = this.shadowRoot?.querySelector('.custom-confirm-dialog') as HTMLElement;
-            if (dialog && !dialog.contains(e.target as Node)) {
-                this._hideConfirmDialog();
-            }
-        };
-
-        document.addEventListener('click', this._dialogOutsideClickHandler);
-    }
-
-    protected _removeDialogOutsideClickHandler() {
-        if (this._dialogOutsideClickHandler) {
-            document.removeEventListener('click', this._dialogOutsideClickHandler);
-            this._dialogOutsideClickHandler = undefined;
-        }
-    }
-
-    protected _positionTooltipWithinFrame(tooltip: HTMLElement, cursorX: number, cursorY: number) {
-        const panelRect = this._panelElem?.getBoundingClientRect();
-        if (!panelRect) {
-            // Fallback positioning
-            tooltip.style.left = `${cursorX - 150}px`;
-            tooltip.style.top = `${cursorY + 10}px`;
-            return;
-        }
-
-        const tooltipWidth = 300; // Approximate tooltip width
-        const tooltipHeight = 100; // Approximate tooltip height
-        const margin = 10; // Margin from panel edges
-
-        // Calculate horizontal position (centered under cursor)
-        let left = cursorX - tooltipWidth / 2;
-        
-        // Ensure tooltip doesn't go outside panel horizontally
-        if (left + tooltipWidth > panelRect.right) {
-            left = panelRect.right - tooltipWidth - margin;
-        }
-        if (left < panelRect.left) {
-            left = panelRect.left + margin;
-        }
-
-        // Calculate vertical position (below cursor by default, above if not enough space)
-        let top = cursorY + 35; // Default: below cursor with adequate offset
-        
-        // Check if tooltip would go below panel bottom
-        if (top + tooltipHeight > panelRect.bottom) {
-            // Position above cursor instead
-            top = cursorY - tooltipHeight - 60;
-            
-            // If still above panel top, position at top with margin
-            if (top < panelRect.top) {
-                top = panelRect.top + margin;
-            }
-        }
-        
-        // Ensure tooltip doesn't go above panel top
-        if (top < panelRect.top) {
-            top = panelRect.top + margin;
-        }
-
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-    }
 
     protected _removeTooltipEventListeners() {
-        const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
-        if (container && this._tooltipMouseEnterHandler) {
-            container.removeEventListener('mouseenter', this._tooltipMouseEnterHandler);
-        }
-
-        const statusIndicator = this.shadowRoot?.querySelector('.status-indicator') as HTMLElement;
-        if (statusIndicator && this._statusTooltipMouseEnterHandler) {
-            statusIndicator.removeEventListener('mouseenter', this._statusTooltipMouseEnterHandler);
-        }
+        // Global tooltip cleanup happens automatically when elements are removed
+        // No need to manually remove event listeners since we're not storing references anymore
+        hideTooltip();
     }
 }
 
