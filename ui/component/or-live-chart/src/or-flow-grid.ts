@@ -49,12 +49,12 @@ const style = css`
         grid-template-columns: 300px 1fr 300px;
         grid-template-rows: 1fr 1fr 1fr;
         gap: 40px;
-        padding: 40px;
-        background: var(--internal-or-flow-grid-background-color);
+        padding: 60px 40px 40px 40px;
+        background: white;
         align-items: center;
         transform-origin: center center;
         min-width: 800px;
-        min-height: 740px;
+        min-height: 760px;
     }
 
     .flow-grid-wrapper {
@@ -157,7 +157,7 @@ const style = css`
         width: 100%;
         height: 100%;
         pointer-events: none;
-        z-index: 1000;
+        z-index: 5;
     }
 
     .connection-line {
@@ -217,13 +217,38 @@ const style = css`
     /* Labels */
     .chart-label {
         position: absolute;
-        top: -25px;
+        top: -30px;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 14px;
-        font-weight: 500;
+        font-size: 20px;
+        font-weight: 600;
         color: var(--internal-or-flow-grid-text-color);
         white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+
+    .chart-label or-icon {
+        --or-icon-width: 16px;
+        --or-icon-height: 16px;
+    }
+
+    .chart-label.producers or-icon {
+        --or-icon-fill: #FFA726; /* Orange for solar/producers */
+    }
+
+    .chart-label.storage or-icon {
+        --or-icon-fill: #66BB6A; /* Green for storage/battery */
+    }
+
+    .chart-label.consumers or-icon {
+        --or-icon-fill: #42A5F5; /* Blue for consumers/home */
+    }
+
+    .chart-label.grid or-icon {
+        --or-icon-fill: #AB47BC; /* Purple for grid/transmission */
     }
 `;
 
@@ -269,8 +294,8 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         const minWidth = 800;  // Minimum required width (300 + gap + central area + gap + 300)
         
         // Calculate minimum height needed for 3 charts stacked vertically
-        // 3 charts × 180px + 2 gaps × 40px + top/bottom padding × 40px = 740px
-        const minHeight = (3 * 180) + (2 * 40) + (2 * 40); // 740px
+        // 3 charts × 180px + 2 gaps × 40px + top padding 60px + bottom padding 40px = 760px
+        const minHeight = (3 * 180) + (2 * 40) + 60 + 40; // 760px
 
         // Calculate scale factors for both dimensions
         const scaleX = hostRect.width < minWidth ? hostRect.width / minWidth : 1;
@@ -299,11 +324,31 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
             if (chartElement) {
                 const rect = chartElement.getBoundingClientRect();
                 
-                // Calculate center point relative to container (since SVG is now inside the scaled container)
-                const centerX = rect.left + rect.width / 2 - containerRect.left;
-                const centerY = rect.top + rect.height / 2 - containerRect.top;
+                // Calculate connection point at the edge of the chart
+                let connectionX, connectionY;
+                const chartWidth = rect.width;
+                const chartHeight = rect.height;
                 
-                positions.set(position, { x: centerX, y: centerY });
+                // Calculate center first
+                const centerX = rect.left + chartWidth / 2 - containerRect.left;
+                const centerY = rect.top + chartHeight / 2 - containerRect.top;
+                
+                // Adjust connection point based on chart position
+                if (position === 'producers' || position === 'storage' || position === 'consumers') {
+                    // For left-side charts, connection point is at the right edge
+                    connectionX = centerX + (chartWidth / 2);
+                    connectionY = centerY;
+                } else if (position === 'grid') {
+                    // For right-side chart, connection point is at the left edge  
+                    connectionX = centerX - (chartWidth / 2);
+                    connectionY = centerY;
+                } else {
+                    // Fallback to center
+                    connectionX = centerX;
+                    connectionY = centerY;
+                }
+                
+                positions.set(position, { x: connectionX, y: connectionY });
             }
         });
 
@@ -430,6 +475,21 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         return this.charts.find(chart => chart.position === position);
     }
 
+    protected _getIconForPosition(position: FlowGridChart['position']): string {
+        switch (position) {
+            case 'producers':
+                return 'solar-power';
+            case 'storage':
+                return 'battery';
+            case 'consumers':
+                return 'home';
+            case 'grid':
+                return 'transmission-tower';
+            default:
+                return 'chart-line';
+        }
+    }
+
     protected _getFlowAnimation(pathLength: number = 200, flowValue: number = 0) {
         const flowPercent = Math.abs(flowValue) / this.maxFlowValue;
         const duration = 5;//Math.max(4, 7 - (flowPercent * 0.3)); // Faster flow = shorter duration
@@ -534,9 +594,14 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
         const chart = this._getChartByPosition(position);
         
         if (!chart) {
+            const iconName = this._getIconForPosition(position);
+            
             return html`
                 <div class="chart-position ${position}">
-                    <div class="chart-label">${label}</div>
+                    <div class="chart-label ${position}">
+                        <or-icon icon="${iconName}"></or-icon>
+                        <span>${label}</span>
+                    </div>
                     <div style="border: 2px dashed #ccc; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #999; border-radius: 20px;">
                         No ${label} Chart
                     </div>
@@ -544,9 +609,14 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
             `;
         }
 
+        const iconName = this._getIconForPosition(position);
+        
         return html`
             <div class="chart-position ${position}">
-                <div class="chart-label">${label}</div>
+                <div class="chart-label ${position}">
+                    <or-icon icon="${iconName}"></or-icon>
+                    <span>${label}</span>
+                </div>
                 <or-live-chart
                     .assetId="${chart.assetId}"
                     .attributeName="${chart.attributeName}"
@@ -589,7 +659,7 @@ export class OrFlowGrid extends translate(i18next)(LitElement) {
                 ${this._renderChart('grid', 'Grid')}
                 <!-- Central node -->
                 <div class="central-node">
-                    <svg width="50" height="70" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="70" height="70" viewBox="0 0 90 100" xmlns="http://www.w3.org/2000/svg">
                         <!-- Shadow/outline path -->
                         <path fill="none" stroke="rgba(0, 0, 0, 0.2)" stroke-width="10" d="
                                 M 25 20
