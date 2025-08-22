@@ -115,53 +115,6 @@ export class VdlAppTooltip extends LitElement {
             .tooltip-content {
                 line-height: 1.4;
             }
-
-            /* Arrow pointing up */
-
-            .tooltip-container::before {
-                content: '';
-                position: absolute;
-                top: -8px;
-                left: 50%;
-                transform: translateX(-50%);
-                border-left: 8px solid transparent;
-                border-right: 8px solid transparent;
-                border-bottom: 8px solid var(--internal-vdl-app-tooltip-border-color);
-            }
-
-            /* Position variants */
-
-            :host([position="bottom"]) .tooltip-container::before {
-                top: -8px;
-                border-top: none;
-                border-bottom: 8px solid var(--internal-vdl-app-tooltip-border-color);
-            }
-
-            :host([position="top"]) .tooltip-container::before {
-                top: 100%;
-                border-bottom: none;
-                border-top: 8px solid var(--internal-vdl-app-tooltip-border-color);
-            }
-
-            :host([position="left"]) .tooltip-container::before {
-                top: 50%;
-                left: 100%;
-                transform: translateY(-50%);
-                border-left: 8px solid var(--internal-vdl-app-tooltip-border-color);
-                border-right: none;
-                border-top: 8px solid transparent;
-                border-bottom: 8px solid transparent;
-            }
-
-            :host([position="right"]) .tooltip-container::before {
-                top: 50%;
-                left: -8px;
-                transform: translateY(-50%);
-                border-right: 8px solid var(--internal-vdl-app-tooltip-border-color);
-                border-left: none;
-                border-top: 8px solid transparent;
-                border-bottom: 8px solid transparent;
-            }
         `;
     }
 
