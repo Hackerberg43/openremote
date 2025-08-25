@@ -584,6 +584,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _mouseLeaveHandler?: any;
     protected _globalTouchHandler?: (e: TouchEvent) => void;
     protected _linkIconClickHandler?: (e: MouseEvent) => void;
+    protected _isChartHovered = false;
     
 
     constructor() {
@@ -1333,10 +1334,14 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 type: "line",
                 data: seriesData,
                 smooth: true,
-                symbol: "none",
+                symbol: this._isChartHovered ? "circle" : "none",
+                symbolSize: this._isChartHovered ? 2 : 0,
                 lineStyle: {
                     color: this._style.getPropertyValue("--internal-or-live-chart-graph-line-color"),
                     width: 2
+                },
+                itemStyle: {
+                    color: this._style.getPropertyValue("--internal-or-live-chart-graph-line-color")
                 },
                 //sampling: "lttb"
             }]
@@ -1544,14 +1549,23 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _toggleChartEventListeners(connect: boolean){
         if (connect) {
             this._mouseEnterHandler = this._chartElem.addEventListener('mouseenter', () => {
+                this._isChartHovered = true;
                 this._chart!.setOption({
-                    yAxis: {show: true}
+                    yAxis: {show: true},
+                    series: [{
+                        symbol: "circle",
+                        symbolSize: 2
+                    }]
                 });
             });
 
             this._mouseLeaveHandler = this._chartElem.addEventListener('mouseleave', () => {
+                this._isChartHovered = false;
                 this._chart!.setOption({
-                    yAxis: { show: false}
+                    yAxis: { show: false},
+                    series: [{
+                        symbol: "none"
+                    }]
                 });
             });
         }
