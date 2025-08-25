@@ -353,6 +353,13 @@ const style = css`
         background-color: color-mix(in srgb, var(--internal-or-live-chart-background-color) 85%, var(--internal-or-live-chart-text-color) 15%);
     }
 
+    /* Always show link icon on mobile devices */
+    @media (hover: none) and (pointer: coarse) {
+        .link-icon {
+            opacity: 0.7;
+        }
+    }
+
     /* Emphasize tooltip-enabled components on panel hover */
     .status-indicator,
     .status-message-container,
