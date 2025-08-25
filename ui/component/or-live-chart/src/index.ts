@@ -728,9 +728,37 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         const endTime = Date.now();
         const startTime = endTime - this._timeframeMs;
-
         this._dataAbortController = new AbortController();
 
+        try {
+            // Step 1: Try interval query
+            const intervalData = await this._fetchIntervalData(startTime, endTime);
+            
+            if (intervalData.length > 0) {
+                // Step 2: If interval data exists, get nearest value at start of timeframe
+                const nearestStartValue = await this._fetchNearestData(startTime);
+                this._data = this._combineDataWithNearestStart(intervalData, nearestStartValue, startTime);
+                console.log("Data loaded with interval + nearest start:", this._data.length, "points");
+            } else {
+                // Step 3: No interval data, use nearest at end as fallback
+                const nearestEndValue = await this._fetchNearestData(endTime);
+                this._data = this._generateSyntheticDataPoints(nearestEndValue, startTime, endTime);
+                console.log("Data loaded with nearest fallback:", this._data.length, "points");
+            }
+            
+            // Initialize chart
+            if (!this._chart && this._chartElem && this.showChart) {
+                this._initializeChart();
+            } else if (this.showChart) {
+                this._updateChart();
+            }
+        } catch (ex) {
+            console.error("Failed to load initial data:", ex);
+            this._data = [];
+        }
+    }
+
+    protected async _fetchIntervalData(startTime: number, endTime: number): Promise<LiveChartDataPoint[]> {
         const query: AssetDatapointIntervalQuery = {
             type: "interval",
             formula: AssetDatapointIntervalQueryFormula.AVG,
@@ -741,84 +769,61 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         };
 
         const response = await manager.rest.api.AssetDatapointResource.getDatapoints(
-            this.assetId,
-            this.attributeName,
+            this.assetId!,
+            this.attributeName!,
             query,
-            {signal: this._dataAbortController.signal}
+            {signal: this._dataAbortController?.signal}
         );
 
-        if (response.status === 200) {
-            if (response.data && response.data.length > 0) {
-                // Handle response data normally
-                this._data = response.data.map((dp: ValueDatapoint<any>) => ({
-                    x: dp.x!,
-                    y: dp.y !== null && dp.y !== undefined ? dp.y : null
-                }));
-                console.log("Data queried:", this._data);
-            } else {
-                // No data from interval query, try nearest query as fallback
-                console.log("No interval data found, attempting nearest query fallback");
-                await this._loadNearestDataFallback(endTime);
-            }
-            
-            // Initialize chart if not already done and chart is enabled
-            if (!this._chart && this._chartElem && this.showChart) {
-                this._initializeChart();
-            } else if (this.showChart) {
-                this._updateChart();
-            }
+        if (response.status === 200 && response.data) {
+            return response.data.map((dp: ValueDatapoint<any>) => ({
+                x: dp.x!,
+                y: dp.y !== null && dp.y !== undefined ? dp.y : null
+            }));
         }
+        return [];
     }
 
-    protected async _loadNearestDataFallback(endTime: number) {
-        if (!this.assetId || !this.attributeName) return;
+    protected async _fetchNearestData(timestamp: number): Promise<any> {
+        const nearestQuery: AssetDatapointNearestQuery = {
+            type: "nearest",
+            fromTimestamp: timestamp
+        };
 
-        try {
-            const nearestQuery: AssetDatapointNearestQuery = {
-                type: "nearest",
-                fromTimestamp: endTime
-            };
+        const response = await manager.rest.api.AssetDatapointResource.getDatapoints(
+            this.assetId!,
+            this.attributeName!,
+            nearestQuery,
+            {signal: this._dataAbortController?.signal}
+        );
 
-            const response = await manager.rest.api.AssetDatapointResource.getDatapoints(
-                this.assetId,
-                this.attributeName,
-                nearestQuery,
-                {signal: this._dataAbortController?.signal}
-            );
-
-            if (response.status === 200 && response.data && response.data.length > 0) {
-                const nearestValue = response.data[0].y;
-                console.log("Found nearest value:", nearestValue);
-                
-                // Generate synthetic data points
-                this._data = this._generateSyntheticDataPoints(nearestValue, endTime);
-                console.log("Generated synthetic data points:", this._data.length);
-            } else {
-                console.log("No nearest data found, initializing with empty data");
-                this._data = [];
-            }
-        } catch (ex) {
-            console.error("Failed to load nearest data:", ex);
-            this._data = [];
+        if (response.status === 200 && response.data && response.data.length > 0) {
+            return response.data[0].y;
         }
+        return null;
     }
 
-    protected _generateSyntheticDataPoints(value: any, endTime: number): LiveChartDataPoint[] {
-        const dataPoints: LiveChartDataPoint[] = [];
-        const startTime = endTime - this._timeframeMs;
+    protected _combineDataWithNearestStart(intervalData: LiveChartDataPoint[], nearestStartValue: any, startTime: number): LiveChartDataPoint[] {
+        if (!intervalData.length) return [];
         
-        // Calculate interval in milliseconds
-        let intervalMs: number;
-        switch (this.refreshInterval) {
-            case "1second":
-                intervalMs = 1000;
-                break;
-            case "1minute":
-                intervalMs = 60 * 1000;
-                break;
-            default:
-                intervalMs = 60 * 1000;
+        const oldestDataTimestamp = intervalData[0].x;
+        const combinedData: LiveChartDataPoint[] = [];
+        
+        // Add synthetic points from start of timeframe to oldest interval data
+        if (nearestStartValue !== null && oldestDataTimestamp > startTime) {
+            const syntheticPoints = this._generateSyntheticDataPoints(nearestStartValue, startTime, oldestDataTimestamp - this._getIntervalMs());
+            combinedData.push(...syntheticPoints);
         }
+        
+        // Add the actual interval data
+        combinedData.push(...intervalData);
+        
+        return combinedData;
+    }
+
+    protected _generateSyntheticDataPoints(value: any, startTime: number, endTime: number): LiveChartDataPoint[] {
+        const dataPoints: LiveChartDataPoint[] = [];
+        const intervalMs = this._getIntervalMs();
         
         // Generate data points from start to end at regular intervals
         for (let timestamp = startTime; timestamp <= endTime; timestamp += intervalMs) {
@@ -829,6 +834,17 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
         
         return dataPoints;
+    }
+
+    protected _getIntervalMs(): number {
+        switch (this.refreshInterval) {
+            case "1second":
+                return 1000;
+            case "1minute":
+                return 60 * 1000;
+            default:
+                return 60 * 1000;
+        }
     }
 
     protected _getIntervalString(): string {
@@ -1322,7 +1338,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     color: this._style.getPropertyValue("--internal-or-live-chart-graph-line-color"),
                     width: 2
                 },
-                sampling: "lttb"
+                //sampling: "lttb"
             }]
         });
     }
