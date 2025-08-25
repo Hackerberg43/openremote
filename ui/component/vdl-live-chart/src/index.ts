@@ -237,14 +237,14 @@ const style = css`
         display: flex;
         align-items: end;
         padding-left: 5px;
-        padding-top: 5px;
+        padding-top: 15px;
         flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
 
     .main-group.expanded {
         flex: 1;
-        justify-content: center;
-        align-items: center;
     }
 
     .main-group.expanded vdl-live-chart-current-value {
