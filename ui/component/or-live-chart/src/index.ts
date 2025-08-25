@@ -7,6 +7,7 @@ import {
     AssetEvent,
     AssetDatapointIntervalQuery,
     AssetDatapointIntervalQueryFormula,
+    AssetDatapointNearestQuery,
     AssetModelUtil,
     Attribute,
     AttributeEvent,
@@ -645,7 +646,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             if (this.assetId && this.attributeName) {
                 this._loadData();
             }
-        } else if (!this._error && this._data.length > 0 && !this._chart && this._chartElem && this.showChart) {
+        } else if (!this._error && !this._chart && this._chartElem && this.showChart) {
             this._initializeChart();
         }
         
@@ -746,12 +747,20 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             {signal: this._dataAbortController.signal}
         );
 
-        if (response.status === 200 && response.data) {
-            this._data = response.data.map((dp: ValueDatapoint<any>) => ({
-                x: dp.x!,
-                y: dp.y !== null && dp.y !== undefined ? dp.y : null
-            }));
-            console.log("Data queried:", this._data);
+        if (response.status === 200) {
+            if (response.data && response.data.length > 0) {
+                // Handle response data normally
+                this._data = response.data.map((dp: ValueDatapoint<any>) => ({
+                    x: dp.x!,
+                    y: dp.y !== null && dp.y !== undefined ? dp.y : null
+                }));
+                console.log("Data queried:", this._data);
+            } else {
+                // No data from interval query, try nearest query as fallback
+                console.log("No interval data found, attempting nearest query fallback");
+                await this._loadNearestDataFallback(endTime);
+            }
+            
             // Initialize chart if not already done and chart is enabled
             if (!this._chart && this._chartElem && this.showChart) {
                 this._initializeChart();
@@ -759,6 +768,67 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 this._updateChart();
             }
         }
+    }
+
+    protected async _loadNearestDataFallback(endTime: number) {
+        if (!this.assetId || !this.attributeName) return;
+
+        try {
+            const nearestQuery: AssetDatapointNearestQuery = {
+                type: "nearest",
+                fromTimestamp: endTime
+            };
+
+            const response = await manager.rest.api.AssetDatapointResource.getDatapoints(
+                this.assetId,
+                this.attributeName,
+                nearestQuery,
+                {signal: this._dataAbortController?.signal}
+            );
+
+            if (response.status === 200 && response.data && response.data.length > 0) {
+                const nearestValue = response.data[0].y;
+                console.log("Found nearest value:", nearestValue);
+                
+                // Generate synthetic data points
+                this._data = this._generateSyntheticDataPoints(nearestValue, endTime);
+                console.log("Generated synthetic data points:", this._data.length);
+            } else {
+                console.log("No nearest data found, initializing with empty data");
+                this._data = [];
+            }
+        } catch (ex) {
+            console.error("Failed to load nearest data:", ex);
+            this._data = [];
+        }
+    }
+
+    protected _generateSyntheticDataPoints(value: any, endTime: number): LiveChartDataPoint[] {
+        const dataPoints: LiveChartDataPoint[] = [];
+        const startTime = endTime - this._timeframeMs;
+        
+        // Calculate interval in milliseconds
+        let intervalMs: number;
+        switch (this.refreshInterval) {
+            case "1second":
+                intervalMs = 1000;
+                break;
+            case "1minute":
+                intervalMs = 60 * 1000;
+                break;
+            default:
+                intervalMs = 60 * 1000;
+        }
+        
+        // Generate data points from start to end at regular intervals
+        for (let timestamp = startTime; timestamp <= endTime; timestamp += intervalMs) {
+            dataPoints.push({
+                x: timestamp,
+                y: value !== null && value !== undefined ? value : null
+            });
+        }
+        
+        return dataPoints;
     }
 
     protected _getIntervalString(): string {
@@ -1233,7 +1303,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _updateChart() {
-        if (!this._chart || this._data.length === 0 || !this.showChart) return;
+        if (!this._chart || !this.showChart) return;
 
         const seriesData = this._data.map(dp => [dp.x, dp.y]);
         const now = Date.now();

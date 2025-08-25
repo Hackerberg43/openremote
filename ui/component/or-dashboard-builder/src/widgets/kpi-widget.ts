@@ -119,7 +119,7 @@ export class KpiWidget extends OrAssetWidget {
                         operatingStatus="running"
                         linkUrl="http://localhost:9000/manager/#/assets/false/5ydJLbMubRRyPnZMJEU97v"
                         statusMessage="info: Temperature approaching threshold. This is a very long message with so much content it should not even be readible by a human user because it is cutoff by this box"
-                        .showChart="${false}"
+                        .showChart="${true}"
                         .additionalAttributes="${[
                             {
                                 assetId: '5ydJLbMubRRyPnZMJEU97v',
