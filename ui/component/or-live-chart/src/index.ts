@@ -330,8 +330,8 @@ const style = css`
 
     .link-icon {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        bottom: 8px;
+        left: 12px;
         --or-icon-width: 16px;
         --or-icon-height: 16px;
         --or-icon-fill: var(--internal-or-live-chart-text-color);
