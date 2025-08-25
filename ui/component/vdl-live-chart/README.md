@@ -1,4 +1,4 @@
-# or-live-chart
+# vdl-live-chart
 
 A real-time live chart component for OpenRemote that displays moving timeframe data using Apache ECharts.
 
@@ -20,27 +20,27 @@ A real-time live chart component for OpenRemote that displays moving timeframe d
 ### Basic Usage
 
 ```html
-<or-live-chart 
+<vdl-live-chart 
     assetId="your-asset-id" 
     attributeName="your-attribute-name">
-</or-live-chart>
+</vdl-live-chart>
 ```
 
 ### With Configuration
 
 ```html
-<or-live-chart 
+<vdl-live-chart 
     assetId="your-asset-id" 
     attributeName="your-attribute-name"
     timeframe="30minutes"
     refreshInterval="1minute">
-</or-live-chart>
+</vdl-live-chart>
 ```
 
 ### With Additional Attribute Indicators
 
 ```html
-<or-live-chart 
+<vdl-live-chart 
     assetId="your-asset-id" 
     attributeName="your-attribute-name"
     .additionalAttributes="${[
@@ -58,7 +58,7 @@ A real-time live chart component for OpenRemote that displays moving timeframe d
             upperThreshold: 100
         }
     ]}">
-</or-live-chart>
+</vdl-live-chart>
 ```
 
 ## Properties

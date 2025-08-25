@@ -24,9 +24,9 @@
     "@openremote/or-attribute-input": "workspace:*",
     "@openremote/or-chart": "workspace:*",
     "@openremote/or-gauge": "workspace:*",
-    "@openremote/or-live-chart": "workspace:*",
     "@openremote/or-map": "workspace:*",
     "@openremote/rest": "workspace:*",
+    "@openremote/vdl-live-chart": "workspace:*",
     "gridstack": "^7.2.0",
     "lit": "^2.0.2"
   },

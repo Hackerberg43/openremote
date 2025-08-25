@@ -82,9 +82,9 @@ export class VdlAppTooltip extends LitElement {
     static get styles() {
         return css`
             :host {
-                --internal-vdl-app-tooltip-background-color: var(--or-live-chart-background-color, var(--or-app-color2, ${unsafeCSS(DefaultColor2)}));
-                --internal-vdl-app-tooltip-border-color: var(--or-live-chart-border-color, rgba(76, 76, 76, 0.6));
-                --internal-vdl-app-tooltip-text-color: var(--or-live-chart-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
+                --internal-vdl-app-tooltip-background-color: var(--vdl-live-chart-background-color, var(--or-app-color2, ${unsafeCSS(DefaultColor2)}));
+                --internal-vdl-app-tooltip-border-color: var(--vdl-live-chart-border-color, rgba(76, 76, 76, 0.6));
+                --internal-vdl-app-tooltip-text-color: var(--vdl-live-chart-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
                 
                 position: fixed;
                 z-index: 10000;

@@ -15,7 +15,7 @@
     { "path": "../or-attribute-input" },
     { "path": "../or-chart" },
     { "path": "../or-gauge" },
-    { "path": "../or-live-chart" },
+    { "path": "../vdl-live-chart" },
     { "path": "../or-map" }
   ]
 }

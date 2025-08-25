@@ -4,15 +4,12 @@ import {translate} from "@openremote/or-translate";
 import i18next from "i18next";
 import {
     Asset,
-    AssetEvent,
     AssetDatapointIntervalQuery,
     AssetDatapointIntervalQueryFormula,
     AssetDatapointNearestQuery,
     AssetModelUtil,
-    Attribute,
     AttributeEvent,
     AttributeRef,
-    ReadAssetEvent,
     ValueDatapoint
 } from "@openremote/model";
 import manager, {DefaultColor2, DefaultColor3, DefaultColor4, Util, subscribe} from "@openremote/core";
@@ -34,8 +31,8 @@ import {getContentWithMenuTemplate} from "@openremote/or-mwc-components/or-mwc-m
 echarts.use([GridComponent, TooltipComponent, LineChart, CanvasRenderer]);
 
 // Additional Attribute Indicator Sub-component
-@customElement("or-live-chart-additional-attribute")
-export class OrLiveChartAdditionalAttribute extends LitElement {
+@customElement("vdl-live-chart-additional-attribute")
+export class VdlLiveChartAdditionalAttribute extends LitElement {
     
     static get styles() {
         return css`
@@ -47,7 +44,7 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
                 align-items: center;
                 gap: 4px;
                 font-size: 11px;
-                color: var(--internal-or-live-chart-text-color, #333);
+                color: var(--internal-vdl-live-chart-text-color, #333);
                 opacity: 0.8;
             }
             
@@ -100,8 +97,8 @@ export class OrLiveChartAdditionalAttribute extends LitElement {
 }
 
 // Current Value Display Sub-component
-@customElement("or-live-chart-current-value")
-export class OrLiveChartCurrentValue extends LitElement {
+@customElement("vdl-live-chart-current-value")
+export class VdlLiveChartCurrentValue extends LitElement {
     
     static get styles() {
         return css`
@@ -115,12 +112,12 @@ export class OrLiveChartCurrentValue extends LitElement {
                 flex: 0 0 auto;
             }
             .current-value-number {
-                color: var(--internal-or-live-chart-text-color, #333);
+                color: var(--internal-vdl-live-chart-text-color, #333);
                 font-size: var(--current-value-font-size, 32px);
                 font-weight: bold;
             }
             .current-value-unit {
-                color: var(--internal-or-live-chart-text-color, #333);
+                color: var(--internal-vdl-live-chart-text-color, #333);
                 font-size: var(--current-value-font-size, 32px);
                 font-weight: 200;
                 margin-left: 5px;
@@ -142,8 +139,6 @@ export class OrLiveChartCurrentValue extends LitElement {
         
         return html`
             <div class="current-value-wrapper">
-                ${this.asset ? html`
-                ` : ''}
                 <span class="current-value-number">${this.value}</span>
                 ${this.unit ? html`
                     <span class="current-value-unit">${this.unit}</span>
@@ -166,7 +161,6 @@ export interface LiveChartDataPoint {
 
 export type TimeframeOption = "5minutes" | "30minutes" | "1hour";
 export type RefreshIntervalOption = "1second" | "1minute";
-
 export type OperatingStatus = "running" | "dischargingOnly";
 
 export interface AdditionalAttribute {
@@ -182,10 +176,10 @@ export type StatusLevel = "ok" | "info" | "warning" | "error";
 // language=CSS
 const style = css`
     :host {
-        --internal-or-live-chart-background-color: var(--or-live-chart-background-color, var(--or-app-color2, ${unsafeCSS(DefaultColor2)}));
-        --internal-or-live-chart-border-color: var(--or-live-chart-border-color, rgba(76, 76, 76, 0.6));
-        --internal-or-live-chart-text-color: var(--or-live-chart-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
-        --internal-or-live-chart-graph-line-color: var(--or-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
+        --internal-vdl-live-chart-background-color: var(--vdl-live-chart-background-color, var(--or-app-color2, ${unsafeCSS(DefaultColor2)}));
+        --internal-vdl-live-chart-border-color: var(--vdl-live-chart-border-color, rgba(76, 76, 76, 0.6));
+        --internal-vdl-live-chart-text-color: var(--vdl-live-chart-text-color, var(--or-app-color3, ${unsafeCSS(DefaultColor3)}));
+        --internal-vdl-live-chart-graph-line-color: var(--vdl-live-chart-graph-line-color, var(--or-app-color4, ${unsafeCSS(DefaultColor4)}));
 
         width: 100%;
         height: 100%;
@@ -202,8 +196,8 @@ const style = css`
         display: flex;
         flex-direction: column;
         padding: 0px 15px 0px 15px;
-        background: var(--internal-or-live-chart-background-color);
-        border: 1px solid var(--internal-or-live-chart-border-color);
+        background: var(--internal-vdl-live-chart-background-color);
+        border: 1px solid var(--internal-vdl-live-chart-border-color);
         border-radius: 20px;
     }
 
@@ -214,7 +208,6 @@ const style = css`
         flex: 1;
         overflow: hidden;
     }
-
 
     .chart-container {
         flex: 1 1 0;
@@ -236,7 +229,7 @@ const style = css`
         align-items: end;
         padding: 10px 5px;
         flex: 0 0 auto;
-        border-top: 1px solid var(--internal-or-live-chart-border-color);
+        border-top: 1px solid var(--internal-vdl-live-chart-border-color);
         gap: 10px;
     }
 
@@ -254,7 +247,7 @@ const style = css`
         align-items: center;
     }
 
-    .main-group.expanded or-live-chart-current-value {
+    .main-group.expanded vdl-live-chart-current-value {
         --current-value-font-size: 40px;
     }
 
@@ -271,7 +264,7 @@ const style = css`
         display: flex;
         align-items: center;
         font-size: 12px;
-        color: var(--internal-or-live-chart-text-color);
+        color: var(--internal-vdl-live-chart-text-color);
         position: relative;
         cursor: help;
     }
@@ -311,16 +304,16 @@ const style = css`
 
     @keyframes flash {
         0% {
-            border-color: var(--internal-or-live-chart-border-color);
-            background-color: var(--internal-or-live-chart-background-color);
+            border-color: var(--internal-vdl-live-chart-border-color);
+            background-color: var(--internal-vdl-live-chart-background-color);
         }
         50% {
             border-color: rgba(244, 67, 54, 1);
-            background-color: color-mix(in srgb, var(--internal-or-live-chart-background-color) 90%, rgba(244, 67, 54, 1) 10%);
+            background-color: color-mix(in srgb, var(--internal-vdl-live-chart-background-color) 90%, rgba(244, 67, 54, 1) 10%);
         }
         100% {
-            border-color: var(--internal-or-live-chart-border-color);
-            background-color: var(--internal-or-live-chart-background-color);
+            border-color: var(--internal-vdl-live-chart-border-color);
+            background-color: var(--internal-vdl-live-chart-background-color);
         }
     }
 
@@ -334,11 +327,11 @@ const style = css`
         left: 12px;
         --or-icon-width: 16px;
         --or-icon-height: 16px;
-        --or-icon-fill: var(--internal-or-live-chart-text-color);
+        --or-icon-fill: var(--internal-vdl-live-chart-text-color);
         opacity: 0;
         transition: opacity 0.2s ease;
         cursor: pointer;
-        background: var(--internal-or-live-chart-background-color);
+        background: var(--internal-vdl-live-chart-background-color);
         border-radius: 3px;
         padding: 2px;
         z-index: 10;
@@ -350,7 +343,7 @@ const style = css`
 
     .link-icon:hover {
         opacity: 1;
-        background-color: color-mix(in srgb, var(--internal-or-live-chart-background-color) 85%, var(--internal-or-live-chart-text-color) 15%);
+        background-color: color-mix(in srgb, var(--internal-vdl-live-chart-background-color) 85%, var(--internal-vdl-live-chart-text-color) 15%);
     }
 
     /* Always show link icon on mobile devices */
@@ -379,7 +372,7 @@ const style = css`
         align-items: center;
         height: 100%;
         flex-direction: column;
-        color: var(--internal-or-live-chart-text-color);
+        color: var(--internal-vdl-live-chart-text-color);
     }
 
     .empty-state {
@@ -388,7 +381,7 @@ const style = css`
         align-items: center;
         height: 100%;
         flex-direction: column;
-        color: var(--internal-or-live-chart-text-color);
+        color: var(--internal-vdl-live-chart-text-color);
         opacity: 0.6;
     }
 
@@ -425,7 +418,7 @@ const style = css`
         --or-icon-width: 14px;
         --or-icon-height: 14px;
         --or-icon-fill: rgb(33, 150, 243);
-        background: var(--internal-or-live-chart-background-color);
+        background: var(--internal-vdl-live-chart-background-color);
         border-radius: 50%;
         padding: 1px;
         z-index: 1;
@@ -443,12 +436,11 @@ const style = css`
         --or-icon-fill: #F44336;
     }
 
-
     .tooltip-title {
         font-weight: bold;
         font-size: 16px;
         margin-bottom: 8px;
-        color: var(--internal-or-live-chart-text-color);
+        color: var(--internal-vdl-live-chart-text-color);
     }
 
     .tooltip-message {
@@ -460,7 +452,7 @@ const style = css`
         font-size: 12px;
         opacity: 0.7;
         font-style: italic;
-        border-top: 1px solid var(--internal-or-live-chart-border-color);
+        border-top: 1px solid var(--internal-vdl-live-chart-border-color);
         padding-top: 8px;
         margin-top: 8px;
     }
@@ -491,7 +483,6 @@ const style = css`
         font-weight: normal;
     }
 
-
     .status-indicator {
         cursor: help;
     }
@@ -503,11 +494,10 @@ const style = css`
     .additional-attributes {
         cursor: help;
     }
-
 `;
 
-@customElement("or-live-chart")
-export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElement)) {
+@customElement("vdl-live-chart")
+export class VdlLiveChart extends subscribe(manager)(translate(i18next)(LitElement)) {
 
     static get styles() {
         return [style];
@@ -551,7 +541,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
     protected _data: LiveChartDataPoint[] = [];
 
-
     @state()
     protected _error?: string;
 
@@ -570,44 +559,38 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     @query("#chart")
     protected _chartElem!: HTMLDivElement;
     
-    @query("or-live-chart-current-value")
-    protected _currentValueElem?: OrLiveChartCurrentValue;
+    @query("vdl-live-chart-current-value")
+    protected _currentValueElem?: VdlLiveChartCurrentValue;
 
     @query(".panel")
     protected _panelElem?: HTMLDivElement;
 
     protected _chart?: echarts.ECharts;
     protected _style!: CSSStyleDeclaration;
-    protected _attributeEventSubscriptionId?: string;
-    protected _additionalAttributeSubscriptions: Map<string, string> = new Map();
     protected _resizeHandler?: () => void;
     protected _containerResizeObserver?: ResizeObserver;
     protected _dataAbortController?: AbortController;
     protected _refreshTimer?: ReturnType<typeof setInterval>;
     protected _lastReceivedValue?: number;
-    protected _timeframeMs: number = 30 * 60 * 1000; // 30 minutes default
-    protected _refreshIntervalMs: number = 60 * 1000; // 1 minute default
+    protected _timeframeMs: number = 30 * 60 * 1000;
+    protected _refreshIntervalMs: number = 60 * 1000;
     protected _mouseEnterHandler?: any;
     protected _mouseLeaveHandler?: any;
     protected _globalTouchHandler?: (e: TouchEvent) => void;
     protected _linkIconClickHandler?: (e: MouseEvent) => void;
     protected _isChartHovered = false;
-    
 
     constructor() {
         super();
-        console.log('or-live-chart constructor called');
         this._updateTimeframeMs();
         this._updateRefreshIntervalMs();
     }
 
     connectedCallback() {
         super.connectedCallback();
-        console.log('or-live-chart connectedCallback called');
         this._style = window.getComputedStyle(this as unknown as Element);
         this.realm = this.realm || manager.getRealm();
         
-        // Setup global touch handler for mobile devices
         if (this._isMobileDevice()) {
             this._setupGlobalTouchHandler();
         }
@@ -658,7 +641,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             this._initializeChart();
         }
         
-        // Setup tooltip positioning after any render
         this.updateComplete.then(() => {
             this._setupTooltipEventListeners();
             this._setupClickHandler();
@@ -701,30 +683,20 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._isLive = false;
 
         try {
-            // Load asset information
             const assetResponse = await manager.rest.api.AssetResource.get(this.assetId);
             this._asset = assetResponse.data;
 
-            // Load initial historical data
             await this._loadInitialData();
-
-            // Get current value
             await this._getCurrentValue();
 
-            // Subscribe to attribute events
             this._subscribeToAttributeEvents();
-
-            // Load and subscribe to additional attributes
             this._loadAdditionalAttributes();
-
-            // Start refresh timer for fixed interval updates
             this._startRefreshTimer();
 
             this._isLive = true;
             this._updateErrorStatus();
 
         } catch (ex) {
-            console.error("Failed to load data:", ex);
             this._error = "errorOccurred";
         } finally {
             this._loading = false;
@@ -739,29 +711,22 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._dataAbortController = new AbortController();
 
         try {
-            // Step 1: Try interval query
             const intervalData = await this._fetchIntervalData(startTime, endTime);
             
             if (intervalData.length > 0) {
-                // Step 2: If interval data exists, get nearest value at start of timeframe
                 const nearestStartValue = await this._fetchNearestData(startTime);
                 this._data = this._combineDataWithNearestStart(intervalData, nearestStartValue, startTime);
-                console.log("Data loaded with interval + nearest start:", this._data.length, "points");
             } else {
-                // Step 3: No interval data, use nearest at end as fallback
                 const nearestEndValue = await this._fetchNearestData(endTime);
                 this._data = this._generateSyntheticDataPoints(nearestEndValue, startTime, endTime);
-                console.log("Data loaded with nearest fallback:", this._data.length, "points");
             }
             
-            // Initialize chart
             if (!this._chart && this._chartElem && this.showChart) {
                 this._initializeChart();
             } else if (this.showChart) {
                 this._updateChart();
             }
         } catch (ex) {
-            console.error("Failed to load initial data:", ex);
             this._data = [];
         }
     }
@@ -817,13 +782,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         const oldestDataTimestamp = intervalData[0].x;
         const combinedData: LiveChartDataPoint[] = [];
         
-        // Add synthetic points from start of timeframe to oldest interval data
         if (nearestStartValue !== null && oldestDataTimestamp > startTime) {
             const syntheticPoints = this._generateSyntheticDataPoints(nearestStartValue, startTime, oldestDataTimestamp - this._getIntervalMs());
             combinedData.push(...syntheticPoints);
         }
         
-        // Add the actual interval data
         combinedData.push(...intervalData);
         
         return combinedData;
@@ -833,7 +796,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         const dataPoints: LiveChartDataPoint[] = [];
         const intervalMs = this._getIntervalMs();
         
-        // Generate data points from start to end at regular intervals
         for (let timestamp = startTime; timestamp <= endTime; timestamp += intervalMs) {
             dataPoints.push({
                 x: timestamp,
@@ -856,7 +818,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _getIntervalString(): string {
-        // Convert refresh interval to appropriate database interval
         switch (this.refreshInterval) {
             case "1second":
                 return "1 second";
@@ -881,7 +842,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
             this._lastReceivedValue = currentValue.value;
 
-            // Get units from asset attribute
             let units: string | undefined;
             if (this._asset && this._asset.attributes) {
                 const attr = this._asset.attributes[this.attributeName];
@@ -891,12 +851,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 }
             }
 
-            // Update the current value sub-component
             if (this._currentValueElem) {
                 this._currentValueElem.value = currentValue.value;
                 this._currentValueElem.unit = units;
             } else {
-                // If sub-component isn't ready yet, wait for next update cycle
                 this.updateComplete.then(() => {
                     if (this._currentValueElem) {
                         this._currentValueElem.value = currentValue.value;
@@ -905,7 +863,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 });
             }
         } catch (ex) {
-            console.error("Failed to get current value:", ex);
+            // Error handled silently
         }
     }
 
@@ -933,16 +891,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             return;
         }
 
-        // Process all additional attributes (no limit)
         const allAttributes = this.additionalAttributes;
         
         for (const attr of allAttributes) {
             try {
-                // Load asset information to get units
                 const assetResponse = await manager.rest.api.AssetResource.get(attr.assetId);
                 const asset = assetResponse.data;
                 
-                // Get current value
                 const currentValue: AttributeEvent = await manager.events!.sendEventWithReply({
                     eventType: "read-asset-attribute",
                     ref: {
@@ -951,7 +906,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     }
                 });
 
-                // Extract units from asset attribute
                 let units: string | undefined;
                 if (asset && asset.attributes) {
                     const attribute = asset.attributes[attr.attributeName];
@@ -969,34 +923,29 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     unit: units 
                 });
 
-                // Subscribe to this attribute's events
                 this._subscribeToAdditionalAttribute(attr);
             } catch (ex) {
-                console.error(`Failed to load additional attribute ${attr.assetId}:${attr.attributeName}:`, ex);
+                // Error handled silently
             }
         }
 
-        // Update error status and trigger re-render to show the loaded data
         this._updateErrorStatus();
-        this.requestUpdate(); // Force re-render now that we have data
+        this.requestUpdate();
     }
 
     protected _subscribeToAdditionalAttribute(attr: AdditionalAttribute) {
         if (!manager.events) return;
 
-        const key = `${attr.assetId}_${attr.attributeName}`;
         const attributeRef: AttributeRef = {
             id: attr.assetId,
             name: attr.attributeName
         };
 
-        // Add to the attributeRefs array for subscription
         const currentRefs = (this as any).attributeRefs || [];
         (this as any).attributeRefs = [...currentRefs, attributeRef];
     }
 
     protected _unsubscribeFromAdditionalAttributes() {
-        // Reset to only the main attribute
         if (this.assetId && this.attributeName) {
             (this as any).attributeRefs = [{
                 id: this.assetId,
@@ -1005,16 +954,13 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         } else {
             (this as any).attributeRefs = undefined;
         }
-        this._additionalAttributeSubscriptions.clear();
     }
 
     protected _determineStatus(value: number | string, upperThreshold?: number, lowerThreshold?: number): StatusLevel {
-        // For text values, ignore thresholds and return ok
         if (typeof value === 'string') {
             return "ok";
         }
         
-        // For numeric values, use threshold logic
         if (upperThreshold !== undefined && value > upperThreshold) {
             return "error";
         }
@@ -1074,11 +1020,11 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _getOperatingStatusColor(operatingStatus?: OperatingStatus): string {
         switch (operatingStatus) {
             case "running":
-                return "#4CAF50"; // green
+                return "#4CAF50";
             case "dischargingOnly":
-                return "#bfff00"; // orange
+                return "#bfff00";
             default:
-                return "#9E9E9E"; // gray
+                return "#9E9E9E";
         }
     }
 
@@ -1113,7 +1059,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _getPrimaryIcon(): { icon: string; color: string } {
         const messageStatus = this._determineMessageStatus(this.statusMessage);
         
-        // If statusMessage contains emergency or warning, use message status icon
         if (messageStatus === "error" || messageStatus === "warning") {
             return {
                 icon: this._getStatusIcon(messageStatus),
@@ -1121,7 +1066,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             };
         }
         
-        // Otherwise use operating status icon
         return {
             icon: this._getOperatingStatusIcon(this.operatingStatus),
             color: this._getOperatingStatusColor(this.operatingStatus)
@@ -1134,13 +1078,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _formatAttributeName(camelCaseName: string): string {
-        // Convert camelCase to Title Case with spaces
-        // maximumPower -> Maximum Power
-        // temperatureSensor -> Temperature Sensor
-        // status -> Status
         return camelCaseName
-            .replace(/([a-z])([A-Z])/g, '$1 $2') // Insert space before capital letters
-            .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+            .replace(/([a-z])([A-Z])/g, '$1 $2')
+            .replace(/^./, str => str.toUpperCase());
     }
 
     protected _updateErrorStatus() {
@@ -1150,7 +1090,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._messageErrorStatus = this._determineMessageStatus(this.statusMessage) === "error";
         this._hasErrorStatus = additionalAttributeError || this._messageErrorStatus;
         
-        // Update panel class directly - this is safe since panel is a top-level element
         if (hadError !== this._hasErrorStatus && this._panelElem) {
             if (this._hasErrorStatus) {
                 this._panelElem.classList.add('error');
@@ -1161,9 +1100,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _updateAdditionalAttributeSubComponent(key: string, value: number | string, status: StatusLevel, unit?: string) {
-        // Find and update the sub-component directly by its properties
-        // This is similar to how _currentValueElem is updated
-        const subComponent = this.shadowRoot?.querySelector(`or-live-chart-additional-attribute[data-key="${key}"]`) as OrLiveChartAdditionalAttribute;
+        const subComponent = this.shadowRoot?.querySelector(`vdl-live-chart-additional-attribute[data-key="${key}"]`) as VdlLiveChartAdditionalAttribute;
         if (subComponent) {
             subComponent.value = value;
             subComponent.status = status;
@@ -1173,21 +1110,17 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-    // This method is called by the subscribe mixin when attribute events are received
     public _onEvent(event: any) {
         if (event.eventType === "attribute") {
             const attributeEvent = event as AttributeEvent;
             
-            // Handle main attribute
             if (attributeEvent.ref?.id === this.assetId && attributeEvent.ref?.name === this.attributeName) {
                 this._lastEventTime = Date.now();
                 this._lastReceivedValue = attributeEvent.value;
                 
-                // Update the current value sub-component directly
                 if (this._currentValueElem) {
                     this._currentValueElem.value = attributeEvent.value;
                     
-                    // Ensure unit is set if it wasn't already
                     if (!this._currentValueElem.unit && this._asset && this._asset.attributes && this.attributeName) {
                         const attr = this._asset.attributes[this.attributeName];
                         if (attr) {
@@ -1198,8 +1131,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     }
                 }
             }
-            
-            // Handle additional attributes
             else {
                 const key = `${attributeEvent.ref?.id}_${attributeEvent.ref?.name}`;
                 const additionalAttr = this.additionalAttributes.find(
@@ -1213,7 +1144,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         additionalAttr.lowerThreshold
                     );
                     
-                    // Get existing unit (preserve it from initial load)
                     const existingData = this._additionalAttributeValues.get(key);
                     const unit = existingData?.unit;
                     
@@ -1223,7 +1153,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                         unit
                     });
                     
-                    // Update sub-component directly without triggering re-render
                     this._updateAdditionalAttributeSubComponent(key, attributeEvent.value, status, unit);
                     this._updateErrorStatus();
                 }
@@ -1238,23 +1167,19 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             const now = Date.now();
             let valueToAdd = this._lastReceivedValue;
 
-            // If no events received within interval, use the same value as previous one
             if (!this._lastEventTime || (now - this._lastEventTime) > this._refreshIntervalMs) {
                 valueToAdd = this._lastReceivedValue;
             }
 
-            // Add new data point
             if (valueToAdd !== undefined && valueToAdd !== null) {
                 const newDataPoint: LiveChartDataPoint = {
                     x: now,
                     y: valueToAdd
                 };
 
-                // Remove old data points outside timeframe window
                 const cutoffTime = now - this._timeframeMs;
                 this._data = [...this._data.filter(dp => dp.x >= cutoffTime), newDataPoint];
 
-                // Update chart only if chart is enabled
                 if (this.showChart) {
                     this._updateChart();
                 }
@@ -1276,7 +1201,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         const chartOptions: ECChartOption = {
             animation: false,
-            //backgroundColor: this._style.getPropertyValue("--internal-or-live-chart-background-color"),
             grid: {
                 show: false,
                 left: 10,
@@ -1319,9 +1243,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._chart.setOption(chartOptions);
         this._updateChart();
 
-        // Handle resize
         this._setupResizeHandler();
-        // eventlisteners
         this._toggleChartEventListeners(true);
         this._setupTooltipEventListeners();
     }
@@ -1344,13 +1266,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                 symbol: this._isChartHovered ? "circle" : "none",
                 symbolSize: this._isChartHovered ? 2 : 0,
                 lineStyle: {
-                    color: this._style.getPropertyValue("--internal-or-live-chart-graph-line-color"),
+                    color: this._style.getPropertyValue("--internal-vdl-live-chart-graph-line-color"),
                     width: 2
                 },
                 itemStyle: {
-                    color: this._style.getPropertyValue("--internal-or-live-chart-graph-line-color")
-                },
-                //sampling: "lttb"
+                    color: this._style.getPropertyValue("--internal-vdl-live-chart-graph-line-color")
+                }
             }]
         });
     }
@@ -1364,14 +1285,12 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             };
             window.addEventListener("resize", this._resizeHandler);
             
-            // Add ResizeObserver to watch for container size changes
             this._containerResizeObserver = new ResizeObserver(() => {
                 if (this._chart) {
                     this._chart.resize();
                 }
             });
             
-            // Observe the chart container element
             const chartContainer = this.shadowRoot?.querySelector('.chart-container') as HTMLElement;
             if (chartContainer) {
                 this._containerResizeObserver.observe(chartContainer);
@@ -1414,18 +1333,15 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         this._lastEventTime = undefined;
         this._isLive = false;
         
-        // Clear the current value sub-component
         if (this._currentValueElem) {
             this._currentValueElem.value = undefined;
             this._currentValueElem.unit = undefined;
         }
         
-        // Clear additional attribute values
         this._additionalAttributeValues.clear();
         this._hasErrorStatus = false;
         this._messageErrorStatus = false;
         
-        // Update panel class if needed
         if (this._panelElem) {
             this._panelElem.classList.remove('error');
         }
@@ -1440,14 +1356,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     render() {
-        console.log('or-live-chart render called', {
-            assetId: this.assetId,
-            attributeName: this.attributeName,
-            loading: this._loading,
-            error: this._error,
-            data: this._data?.length
-        });
-
         if (!this.assetId || !this.attributeName) {
             return html`
                 <div class="panel">
@@ -1498,9 +1406,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                             <div class="status-dot ${this._isLive ? 'live' : this._loading ? 'loading' : this._error ? 'error' : ''}"></div>
                             <span>${this._isLive ? 'Connected' : this._loading ? 'Loading' : this._error ? 'Error' : 'Disconnected'}</span>
                         </div>
-                    <or-live-chart-current-value 
+                    <vdl-live-chart-current-value 
                         .asset="${this._asset}"
-                    ></or-live-chart-current-value>
+                    ></vdl-live-chart-current-value>
                     ${this._shouldShowIcon() ? html`
                         <div class="status-message-container">
                             <div class="icon-wrapper">
@@ -1529,8 +1437,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             return html``;
         }
 
-        const visibleAttributes = this.additionalAttributes.slice(0, 3); // Only show first 3
-        const allAttributes = this.additionalAttributes; // All for tooltip
+        const visibleAttributes = this.additionalAttributes.slice(0, 3);
         
         return html`
             <div class="additional-attributes">
@@ -1539,19 +1446,18 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
                     const attrData = this._additionalAttributeValues.get(key);
                     
                     return html`
-                        <or-live-chart-additional-attribute 
+                        <vdl-live-chart-additional-attribute 
                             data-key="${key}"
                             .icon="${attr.icon}"
                             .value="${attrData?.value}"
                             .status="${attrData?.status || 'ok'}"
                             .unit="${attrData?.unit}">
-                        </or-live-chart-additional-attribute>
+                        </vdl-live-chart-additional-attribute>
                     `;
                 })}
             </div>
         `;
     }
-
 
     protected _toggleChartEventListeners(connect: boolean){
         if (connect) {
@@ -1579,12 +1485,10 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         else if (!connect) {
             this._chartElem?.removeEventListener('mouseenter', this._mouseEnterHandler);
             this._chartElem?.removeEventListener('mouseleave', this._mouseLeaveHandler);
-
         }
     }
 
     protected _setupTooltipEventListeners() {
-        // Setup status message tooltip
         const container = this.shadowRoot?.querySelector('.status-message-container') as HTMLElement;
         
         if (container) {
@@ -1611,7 +1515,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             container.addEventListener('touchstart', touchHandler);
         }
 
-        // Setup status indicator tooltip
         const statusIndicator = this.shadowRoot?.querySelector('.status-indicator') as HTMLElement;
         
         if (statusIndicator) {
@@ -1638,7 +1541,6 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
             statusIndicator.addEventListener('touchstart', statusTouchHandler);
         }
 
-        // Setup additional attributes tooltip
         const attributesContainer = this.shadowRoot?.querySelector('.additional-attributes') as HTMLElement;
         
         if (attributesContainer) {
@@ -1747,16 +1649,14 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         `;
     }
 
-
     protected _isMobileDevice(): boolean {
         return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     }
 
     protected _setupGlobalTouchHandler() {
-        if (this._globalTouchHandler) return; // Already setup
+        if (this._globalTouchHandler) return;
         
         this._globalTouchHandler = (e: TouchEvent) => {
-            // Check if the touch target is outside the component
             const componentElement = this.shadowRoot?.host as HTMLElement;
             if (componentElement && !componentElement.contains(e.target as Node)) {
                 hideTooltip();
@@ -1774,17 +1674,15 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     }
 
     protected _setupClickHandler() {
-        if (!this.linkUrl) return; // Only setup if linkUrl is provided
+        if (!this.linkUrl) return;
 
         const linkIcon = this.shadowRoot?.querySelector('.link-icon') as HTMLElement;
         if (!linkIcon) return;
 
-        // Remove existing click handler if any
         this._removeClickHandler();
 
         this._linkIconClickHandler = (e: MouseEvent) => {
-            e.stopPropagation(); // Prevent event bubbling
-            // Show browser confirmation dialog
+            e.stopPropagation();
             if (confirm('Browse to this asset?')) {
                 window.open(this.linkUrl, '_blank');
             }
@@ -1800,19 +1698,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
         }
     }
 
-
-
     protected _removeTooltipEventListeners() {
-        // Global tooltip cleanup happens automatically when elements are removed
-        // No need to manually remove event listeners since we're not storing references anymore
         hideTooltip();
     }
 }
-
-
-// Ensure component is available for import
-//declare global {
-//    interface HTMLElementTagNameMap {
-//        "or-live-chart": OrLiveChart;
-//    }
-//}
