@@ -327,6 +327,44 @@ const style = css`
         animation: flash 2.5s infinite;
     }
 
+    .link-icon {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        --or-icon-width: 16px;
+        --or-icon-height: 16px;
+        --or-icon-fill: var(--internal-or-live-chart-text-color);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+        background: var(--internal-or-live-chart-background-color);
+        border-radius: 3px;
+        padding: 2px;
+        z-index: 10;
+    }
+
+    .panel:hover .link-icon {
+        opacity: 0.7;
+    }
+
+    .link-icon:hover {
+        opacity: 1;
+        background-color: color-mix(in srgb, var(--internal-or-live-chart-background-color) 85%, var(--internal-or-live-chart-text-color) 15%);
+    }
+
+    /* Emphasize tooltip-enabled components on panel hover */
+    .status-indicator,
+    .status-message-container,
+    .additional-attributes {
+        transition: filter 0.2s ease;
+    }
+
+    .panel:hover .status-indicator,
+    .panel:hover .status-message-container,
+    .panel:hover .additional-attributes {
+        filter: brightness(1.2) drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+    }
+
     .error-container {
         display: flex;
         justify-content: center;
@@ -544,7 +582,7 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _mouseEnterHandler?: any;
     protected _mouseLeaveHandler?: any;
     protected _globalTouchHandler?: (e: TouchEvent) => void;
-    protected _panelClickHandler?: (e: MouseEvent) => void;
+    protected _linkIconClickHandler?: (e: MouseEvent) => void;
     
 
     constructor() {
@@ -1348,6 +1386,9 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
 
         return html`
             <div class="panel ${this._hasErrorStatus ? 'error' : ''}">
+                ${this.linkUrl ? html`
+                    <or-icon class="link-icon" icon="open-in-new"></or-icon>
+                ` : ''}
                 <div class="panel-content">
                     ${this.showChart ? html`
                         <div class="chart-container">
@@ -1628,26 +1669,27 @@ export class OrLiveChart extends subscribe(manager)(translate(i18next)(LitElemen
     protected _setupClickHandler() {
         if (!this.linkUrl) return; // Only setup if linkUrl is provided
 
-        const panel = this.shadowRoot?.querySelector('.panel') as HTMLElement;
-        if (!panel) return;
+        const linkIcon = this.shadowRoot?.querySelector('.link-icon') as HTMLElement;
+        if (!linkIcon) return;
 
         // Remove existing click handler if any
         this._removeClickHandler();
 
-        this._panelClickHandler = (e: MouseEvent) => {
+        this._linkIconClickHandler = (e: MouseEvent) => {
+            e.stopPropagation(); // Prevent event bubbling
             // Show browser confirmation dialog
             if (confirm('Browse to this asset?')) {
                 window.open(this.linkUrl, '_blank');
             }
         };
 
-        panel.addEventListener('click', this._panelClickHandler);
+        linkIcon.addEventListener('click', this._linkIconClickHandler);
     }
 
     protected _removeClickHandler() {
-        const panel = this.shadowRoot?.querySelector('.panel') as HTMLElement;
-        if (panel && this._panelClickHandler) {
-            panel.removeEventListener('click', this._panelClickHandler);
+        const linkIcon = this.shadowRoot?.querySelector('.link-icon') as HTMLElement;
+        if (linkIcon && this._linkIconClickHandler) {
+            linkIcon.removeEventListener('click', this._linkIconClickHandler);
         }
     }
 
