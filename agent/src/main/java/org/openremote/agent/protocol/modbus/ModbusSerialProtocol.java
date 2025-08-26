@@ -32,19 +32,20 @@ public class ModbusSerialProtocol extends AbstractModbusProtocol<ModbusSerialPro
 
     @Override
     protected PlcConnection createIoClient(ModbusSerialAgent agent) throws RuntimeException {
+        String serialPort = agent.getSerialPort()
+                .orElseThrow(() -> new IllegalArgumentException("Serial port not set"));
 
-        connectionString = "modbus-rtu://"+agent.getSerialPort() +
+        String connectionString = "modbus-rtu://" + serialPort +
                 "?serial.baud-rate=" + agent.getBaudRate() +
                 "&unit-identifier=" + agent.getUnitId() +
                 "&serial.num-data-bits=" + agent.getDataBits() +
                 "&serial.num-stop-bits=" + agent.getStopBits();
-        PlcConnection plcConnection;
+
         try {
-            plcConnection = PlcDriverManager.getDefault().getConnectionManager().getConnection(connectionString);
+            return PlcDriverManager.getDefault().getConnectionManager().getConnection(connectionString);
         } catch (PlcConnectionException e) {
             throw new RuntimeException(e);
         }
-        return plcConnection;
     }
 
     @Override
