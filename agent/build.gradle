@@ -21,6 +21,7 @@ dependencies {
 
     api "net.sf.saxon:Saxon-HE:$saxonHEVersion"
 
+    //PLC4X dependencies for modbus
     implementation "org.apache.plc4x:plc4j-api:$plc4xVersion"
     implementation "org.apache.plc4x:plc4j-driver-modbus:$plc4xVersion"
     implementation "org.apache.plc4x:plc4j-transport-serial:$plc4xVersion"
