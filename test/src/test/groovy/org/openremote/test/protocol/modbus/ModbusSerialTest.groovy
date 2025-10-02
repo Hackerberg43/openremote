@@ -402,6 +402,110 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
         }
     }
 
+    def "Modbus Serial Test - 64-bit Data Types (LINT, ULINT, LREAL)"() {
+        given: "expected conditions"
+        def conditions = new PollingConditions(timeout: 15, delay: 0.5)
+
+        when: "the container starts"
+        def container = startContainer(defaultConfig(), defaultServices())
+        def assetStorageService = container.getService(AssetStorageService.class)
+        def assetProcessingService = container.getService(AssetProcessingService.class)
+        def agentService = container.getService(AgentService.class)
+
+        and: "a Modbus Serial agent is created"
+        def agent = new ModbusSerialAgent("Modbus RTU 64-bit Test")
+        agent.setRealm(MASTER_REALM)
+        agent.addOrReplaceAttributes(
+                new Attribute<>(ModbusSerialAgent.SERIAL_PORT, "/dev/ttyUSB0"),
+                new Attribute<>(ModbusSerialAgent.BAUD_RATE, 9600),
+                new Attribute<>(ModbusSerialAgent.DATA_BITS, 8),
+                new Attribute<>(ModbusSerialAgent.STOP_BITS, 1),
+                new Attribute<>(ModbusSerialAgent.PARITY, ModbusSerialAgent.ModbusClientParity.EVEN),
+                new Attribute<>(ModbusSerialAgent.UNIT_ID, 1),
+                new Attribute<>(ModbusSerialAgent.MAX_REGISTER_LENGTH, 50)
+        )
+
+        agent = assetStorageService.merge(agent)
+
+        and: "the agent is linked to a device with 64-bit data types"
+        def device = new ThingAsset("64-bit Test Device")
+        device.setRealm(MASTER_REALM)
+        device.setParent(agent)
+        device.addOrReplaceAttributes(
+                // LREAL - Double precision float at address 300 (4 registers)
+                new Attribute<>("doubleValue", ValueType.NUMBER).addOrReplaceMeta(
+                        new MetaItem<>(AGENT_LINK, new ModbusAgentLink(agent.getId())
+                                .tap {
+                                    it.setPollingMillis(1000)
+                                    it.setReadMemoryArea(ModbusAgentLink.ReadMemoryArea.HOLDING)
+                                    it.setReadValueType(ModbusAgentLink.ModbusDataType.LREAL)
+                                    it.setReadAddress(300)
+                                }
+                        )
+                ),
+                // LINT - 64-bit signed integer at address 310 (4 registers)
+                new Attribute<>("longSignedValue", ValueType.LONG).addOrReplaceMeta(
+                        new MetaItem<>(AGENT_LINK, new ModbusAgentLink(agent.getId())
+                                .tap {
+                                    it.setPollingMillis(1000)
+                                    it.setReadMemoryArea(ModbusAgentLink.ReadMemoryArea.HOLDING)
+                                    it.setReadValueType(ModbusAgentLink.ModbusDataType.LINT)
+                                    it.setReadAddress(310)
+                                }
+                        )
+                ),
+                // ULINT - 64-bit unsigned integer at address 320 (4 registers)
+                new Attribute<>("longUnsignedValue", ValueType.BIG_INTEGER).addOrReplaceMeta(
+                        new MetaItem<>(AGENT_LINK, new ModbusAgentLink(agent.getId())
+                                .tap {
+                                    it.setPollingMillis(1000)
+                                    it.setReadMemoryArea(ModbusAgentLink.ReadMemoryArea.HOLDING)
+                                    it.setReadValueType(ModbusAgentLink.ModbusDataType.ULINT)
+                                    it.setReadAddress(320)
+                                }
+                        )
+                )
+        )
+
+        device = assetStorageService.merge(device)
+
+        then: "the agent should connect successfully"
+        conditions.eventually {
+            def actualAgent = assetStorageService.find(agent.getId(), true) as ModbusSerialAgent
+            assert actualAgent.getAgentStatus().orElse(null) == ConnectionStatus.CONNECTED
+        }
+
+        and: "all 64-bit attributes should receive values"
+        conditions.eventually {
+            device = assetStorageService.find(device.getId(), true)
+
+            // Check LREAL (double) - should be 123.456789
+            def doubleValue = device.getAttribute("doubleValue").flatMap { it.getValue() }.orElse(null)
+            assert doubleValue != null
+            assert doubleValue instanceof Number
+            assert Math.abs(((Number) doubleValue).doubleValue() - 123.456789d) < 0.000001
+
+            // Check LINT (signed long) - should be -9223372036854775000L
+            def longSignedValue = device.getAttribute("longSignedValue").flatMap { it.getValue() }.orElse(null)
+            assert longSignedValue != null
+            assert longSignedValue instanceof Long
+            assert longSignedValue == -9223372036854775000L
+
+            // Check ULINT (unsigned BigInteger) - should be 18446744073709551000
+            def longUnsignedValue = device.getAttribute("longUnsignedValue").flatMap { it.getValue() }.orElse(null)
+            assert longUnsignedValue != null
+            assert longUnsignedValue instanceof BigInteger
+            assert longUnsignedValue == new BigInteger("18446744073709551000")
+        }
+
+        and: "verify protocol instance has created batch groups"
+        conditions.eventually {
+            def protocol = agentService.getProtocolInstance(agent.id) as ModbusSerialProtocol
+            assert protocol != null
+            assert protocol.batchGroups.size() > 0
+        }
+    }
+
     /**
      * Mock Serial Port implementation for testing - implements SerialPortWrapper interface
      */
@@ -503,19 +607,54 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
                     response[2] = (byte) registerBytes
 
                     // Generate test data based on address
-                    if (quantity == 2 && address == 200) {
-                        // Return float value 23.5
-                        ByteBuffer bb = ByteBuffer.allocate(4)
-                        bb.order(ByteOrder.BIG_ENDIAN)
-                        bb.putFloat(23.5f)
-                        byte[] floatBytes = bb.array()
-                        System.arraycopy(floatBytes, 0, response, 3, 4)
-                    } else {
-                        // Return incrementing values starting from address
-                        for (int i = 0; i < quantity; i++) {
-                            int value = address + i
-                            response[3 + i * 2] = (byte) (value >> 8)
-                            response[3 + i * 2 + 1] = (byte) (value & 0xFF)
+                    // Handle special test data addresses for different data types
+                    for (int i = 0; i < quantity; i++) {
+                        int currentAddress = address + i
+                        int responseOffset = 3 + i * 2
+
+                        // Check if this register is part of a special test value
+                        if (currentAddress >= 200 && currentAddress < 202 && address == 200 && quantity == 2) {
+                            // Return float value 23.5
+                            ByteBuffer bb = ByteBuffer.allocate(4)
+                            bb.order(ByteOrder.BIG_ENDIAN)
+                            bb.putFloat(23.5f)
+                            byte[] floatBytes = bb.array()
+                            System.arraycopy(floatBytes, 0, response, 3, 4)
+                            break
+                        } else if (currentAddress >= 300 && currentAddress < 304) {
+                            // Return double value 123.456789 at registers 300-303
+                            if (i == 0 || currentAddress == 300) {
+                                int regOffset = currentAddress - 300
+                                ByteBuffer bb = ByteBuffer.allocate(8)
+                                bb.order(ByteOrder.BIG_ENDIAN)
+                                bb.putDouble(123.456789d)
+                                byte[] doubleBytes = bb.array()
+                                int copyLen = Math.min(registerBytes - (responseOffset - 3), 8 - (regOffset * 2))
+                                System.arraycopy(doubleBytes, regOffset * 2, response, responseOffset, Math.min(copyLen, 8))
+                            }
+                        } else if (currentAddress >= 310 && currentAddress < 314) {
+                            // Return 64-bit signed integer: -9223372036854775000L at registers 310-313
+                            int regOffset = currentAddress - 310
+                            ByteBuffer bb = ByteBuffer.allocate(8)
+                            bb.order(ByteOrder.BIG_ENDIAN)
+                            bb.putLong(-9223372036854775000L)
+                            byte[] longBytes = bb.array()
+                            int copyLen = Math.min(2, 8 - (regOffset * 2))
+                            System.arraycopy(longBytes, regOffset * 2, response, responseOffset, copyLen)
+                        } else if (currentAddress >= 320 && currentAddress < 324) {
+                            // Return 64-bit unsigned integer at registers 320-323
+                            int regOffset = currentAddress - 320
+                            ByteBuffer bb = ByteBuffer.allocate(8)
+                            bb.order(ByteOrder.BIG_ENDIAN)
+                            bb.putLong(-616L) // This represents a large unsigned number
+                            byte[] longBytes = bb.array()
+                            int copyLen = Math.min(2, 8 - (regOffset * 2))
+                            System.arraycopy(longBytes, regOffset * 2, response, responseOffset, copyLen)
+                        } else {
+                            // Return incrementing values
+                            int value = currentAddress
+                            response[responseOffset] = (byte) (value >> 8)
+                            response[responseOffset + 1] = (byte) (value & 0xFF)
                         }
                     }
                     break

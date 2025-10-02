@@ -416,6 +416,47 @@ public class ModbusSerialProtocol extends AbstractProtocol<ModbusSerialAgent, Mo
                     buffer.order(ByteOrder.BIG_ENDIAN);
                     return buffer.getInt();
                 }
+            } else if (byteCount == 8) {
+                // Four registers - could be 64-bit integer or double precision float
+                byte[] dataBytes = new byte[8];
+                System.arraycopy(response, 3, dataBytes, 0, 8);
+
+                if (dataType == ModbusAgentLink.ModbusDataType.LREAL) {
+                    ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                    buffer.order(ByteOrder.BIG_ENDIAN);
+                    double value = buffer.getDouble();
+
+                    // Filter out NaN and Infinity values to prevent database issues
+                    if (Double.isNaN(value) || Double.isInfinite(value)) {
+                        LOG.warning("Modbus response contains invalid double value (NaN or Infinity), ignoring update");
+                        return null;
+                    }
+
+                    return value;
+                } else if (dataType == ModbusAgentLink.ModbusDataType.LINT) {
+                    // 64-bit signed integer
+                    ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                    buffer.order(ByteOrder.BIG_ENDIAN);
+                    return buffer.getLong();
+                } else if (dataType == ModbusAgentLink.ModbusDataType.ULINT) {
+                    // 64-bit unsigned integer - use BigInteger
+                    ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                    buffer.order(ByteOrder.BIG_ENDIAN);
+                    long signedValue = buffer.getLong();
+
+                    // Convert to unsigned BigInteger
+                    if (signedValue >= 0) {
+                        return java.math.BigInteger.valueOf(signedValue);
+                    } else {
+                        // Handle negative as unsigned
+                        return java.math.BigInteger.valueOf(signedValue).add(java.math.BigInteger.ONE.shiftLeft(64));
+                    }
+                } else {
+                    // Default: treat as 64-bit signed integer
+                    ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                    buffer.order(ByteOrder.BIG_ENDIAN);
+                    return buffer.getLong();
+                }
             }
         }
         
@@ -778,6 +819,46 @@ public class ModbusSerialProtocol extends AbstractProtocol<ModbusSerialAgent, Mo
                         ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
                         buffer.order(ByteOrder.BIG_ENDIAN);
                         return buffer.getInt();
+                    }
+                } else if (registerCount == 4) {
+                    // Four registers - could be 64-bit integer or double precision float
+                    byte[] dataBytes = new byte[8];
+                    System.arraycopy(response, byteOffset, dataBytes, 0, 8);
+
+                    if (dataType == ModbusAgentLink.ModbusDataType.LREAL) {
+                        ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                        buffer.order(ByteOrder.BIG_ENDIAN);
+                        double value = buffer.getDouble();
+
+                        if (Double.isNaN(value) || Double.isInfinite(value)) {
+                            LOG.warning("Batch response contains invalid double value (NaN or Infinity), ignoring");
+                            return null;
+                        }
+
+                        return value;
+                    } else if (dataType == ModbusAgentLink.ModbusDataType.LINT) {
+                        // 64-bit signed integer
+                        ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                        buffer.order(ByteOrder.BIG_ENDIAN);
+                        return buffer.getLong();
+                    } else if (dataType == ModbusAgentLink.ModbusDataType.ULINT) {
+                        // 64-bit unsigned integer - use BigInteger
+                        ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                        buffer.order(ByteOrder.BIG_ENDIAN);
+                        long signedValue = buffer.getLong();
+
+                        // Convert to unsigned BigInteger
+                        if (signedValue >= 0) {
+                            return java.math.BigInteger.valueOf(signedValue);
+                        } else {
+                            // Handle negative as unsigned
+                            return java.math.BigInteger.valueOf(signedValue).add(java.math.BigInteger.ONE.shiftLeft(64));
+                        }
+                    } else {
+                        // Default: treat as 64-bit signed integer
+                        ByteBuffer buffer = ByteBuffer.wrap(dataBytes);
+                        buffer.order(ByteOrder.BIG_ENDIAN);
+                        return buffer.getLong();
                     }
                 }
             }
