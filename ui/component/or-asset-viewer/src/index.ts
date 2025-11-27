@@ -1176,7 +1176,9 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
     }
 
     public isModified() {
-        return !!this.editMode && this._assetInfo && this._assetInfo.modified;
+        if (!this.editMode || !this._assetInfo) return false;
+        const editor = this.shadowRoot?.getElementById("editor") as OrEditAssetPanel;
+        return editor?.hasModifications() ?? this._assetInfo.modified;
     }
 
     /**
@@ -1320,7 +1322,7 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
         if (editMode) {
             content = html`
                 <div id="edit-container">
-                    <or-edit-asset-panel id="editor" .asset="${asset}"></or-edit-asset-panel>
+                    <or-edit-asset-panel id="editor" .liveAsset="${asset}"></or-edit-asset-panel>
                 </div>
             `;
 
@@ -1443,18 +1445,25 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
             return;
         }
 
-        const asset = this._assetInfo.asset;
+        const editor = this.shadowRoot!.getElementById("editor") as OrEditAssetPanel;
+        const assetToSave = editor ? editor.getAssetToSave() : this._assetInfo.asset;
+
         this.saveBtnElem.disabled = true;
         this._saveInProgress = true;
         this.wrapperElem.classList.add("saving");
 
-        const saveResult = await saveAsset(asset);
+        const saveResult = await saveAsset(assetToSave);
 
         if (saveResult.success) {
             try {
                 const assetInfo = await this.loadAssetInfo(saveResult.asset!);
                 this._assetInfo = assetInfo;
                 this.assetId = saveResult.asset?.id;
+
+                // Reset editor state after successful save
+                if (editor) {
+                    editor.resetEditState();
+                }
             } catch (e) {
                 // We can ignore this as it should indicate that the asset has changed
             }
@@ -1482,14 +1491,14 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
         }
 
         if (event.eventType === "asset") {
-
             const asset = (event as AssetEvent).asset!;
 
             // Reload the asset if...
             const reloadAsset = !this.editMode // Only in view mode
                 || !this._assetInfo // Nothing currently loaded
                 || (asset.version !== this._assetInfo.asset?.version // Version is different from what is loaded
-                    && !this._saveInProgress) // And save isn't in progress
+                    && !this._saveInProgress); // And save isn't in progress
+
             if (reloadAsset && this.editMode && this._assetInfo?.modified) {
                 // Asset has changed whilst we're editing it so inform the user and reload
                 await showOkDialog("assetModified", i18next.t("assetModifiedMustRefresh"));
@@ -1499,6 +1508,14 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
                 this._assetInfo = undefined;
                 try {
                     this._assetInfo = await this.loadAssetInfo(asset);
+
+                    // Reset editor state when asset is reloaded
+                    if (this.editMode) {
+                        const editor = this.shadowRoot!.getElementById("editor") as OrEditAssetPanel;
+                        if (editor) {
+                            editor.resetEditState();
+                        }
+                    }
                 } catch (e) {
                     // We can ignore this as it should indicate that the asset has changed
                 }
@@ -1506,36 +1523,32 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
         }
 
         if (event.eventType === "attribute") {
-
             if (!this._assetInfo) {
                 return;
             }
 
             const asset = this._assetInfo.asset;
-
-            // Inject the attribute as we don't subscribe to events from individual attribute inputs
             const attributeEvent = event as AttributeEvent;
             const attrName = attributeEvent.ref!.name!;
 
             if (asset && asset.attributes && asset.attributes[attrName]) {
-
                 // Remove any cached template
                 delete this._assetInfo.attributeTemplateMap[attrName];
 
-                // Update attribute within the asset
+                // Always update the asset in _assetInfo so it stays in sync
                 const attr = {...asset.attributes[attrName]};
                 attr.value = attributeEvent.value;
                 attr.timestamp = attributeEvent.timestamp;
                 asset.attributes[attrName] = attr;
 
                 if (this.editMode) {
-                    // Notify editor that attribute has changed
+                    // Let editor handle the update (manages conflicts, flash, etc.)
                     const editor = this.shadowRoot!.getElementById("editor") as OrEditAssetPanel;
-
                     if (editor) {
-                        editor.attributeUpdated(attrName);
+                        editor.attributeUpdated(attrName, attributeEvent.value);
                     }
                 } else {
+                    // View mode: re-render to show updated value
                     this.requestUpdate();
                 }
             }
