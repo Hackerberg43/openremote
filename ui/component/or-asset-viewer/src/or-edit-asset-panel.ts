@@ -19,6 +19,8 @@ import { OrAssetTree, UiAssetTreeNode } from "@openremote/or-asset-tree";
 import {jsonFormsInputTemplateProvider, OrAttributeInput, OrAttributeInputChangedEvent } from "@openremote/or-attribute-input";
 import {createRef, ref, Ref } from "lit/directives/ref.js";
 import {classMap} from "lit/directives/class-map.js";
+import {repeat} from "lit/directives/repeat.js";
+import {guard} from "lit/directives/guard.js";
 
 /**
  * Represents a user's pending change to an attribute
@@ -34,7 +36,6 @@ export interface UserAttributeChange {
  */
 export interface AttributeEditState {
     userChange?: UserAttributeChange;
-    serverUpdatedAt?: number;
     /** True if server updated while user has pending changes */
     hasConflict: boolean;
     /** True if user chose to keep their value - don't show conflict again */
@@ -322,6 +323,13 @@ export class OrEditAssetPanel extends LitElement {
     protected attributeTemplatesAndValidators: TemplateAndValidator[] = [];
     protected expandedAll: boolean = false;
 
+    /** Cache for attribute templates - keyed by attribute name */
+    private _templateCache: Map<string, TemplateAndValidator> = new Map();
+    /** Attributes that need template regeneration */
+    private _dirtyAttributes: Set<string> = new Set();
+    /** Track pending update to batch multiple state changes */
+    private _updatePending: boolean = false;
+
     public static get styles() {
         return [
             unsafeCSS(tableStyle),
@@ -335,6 +343,8 @@ export class OrEditAssetPanel extends LitElement {
         this.editStates = new Map();
         this.assetLevelChanges = {};
         this.addedAttributes = {};
+        this._templateCache.clear();
+        this._dirtyAttributes.clear();
     }
 
     /** Check if there are any user modifications */
@@ -361,7 +371,7 @@ export class OrEditAssetPanel extends LitElement {
     }
 
     /** Called when an external attribute update arrives (liveAsset is already updated by parent) */
-    public attributeUpdated(attrName: string, newValue: any, timestamp: number): void {
+    public attributeUpdated(attrName: string, newValue: any): void {
         if (!this.liveAsset?.attributes?.[attrName]) return;
 
         let editState = this.editStates.get(attrName);
@@ -372,25 +382,29 @@ export class OrEditAssetPanel extends LitElement {
             if (!editState) {
                 editState = { hasConflict: false, userChoseToKeep: false, isEditing: false, showUpdateFlash: false };
             }
-            editState.serverUpdatedAt = timestamp;
             if (!editState.userChoseToKeep) {
                 editState.hasConflict = true;
             }
-            this.editStates = new Map(this.editStates.set(attrName, editState));
+            this.editStates.set(attrName, editState);
+            this._markDirty(attrName);
+            this._scheduleUpdate();
         } else {
             // No user interaction - just update display with flash
             if (!editState) {
                 editState = { hasConflict: false, userChoseToKeep: false, isEditing: false, showUpdateFlash: false };
             }
             editState.showUpdateFlash = true;
-            editState.serverUpdatedAt = timestamp;
-            this.editStates = new Map(this.editStates.set(attrName, editState));
+            this.editStates.set(attrName, editState);
+            this._markDirty(attrName);
+            this._scheduleUpdate();
 
             setTimeout(() => {
                 const state = this.editStates.get(attrName);
                 if (state) {
                     state.showUpdateFlash = false;
-                    this.editStates = new Map(this.editStates.set(attrName, state));
+                    this.editStates.set(attrName, state);
+                    this._markDirty(attrName);
+                    this._scheduleUpdate();
                 }
             }, 800);
         }
@@ -408,6 +422,7 @@ export class OrEditAssetPanel extends LitElement {
             editState.userChange.value = this.liveAsset.attributes?.[attrName]?.value;
         }
         this.editStates.set(attrName, editState);
+        // No need to mark dirty or update - editing state doesn't affect visual template
     }
 
     protected _onAttributeBlur(attrName: string): void {
@@ -416,12 +431,17 @@ export class OrEditAssetPanel extends LitElement {
             editState.isEditing = false;
             // If user didn't change value (still same as server), clear the userChange
             const serverValue = this.liveAsset.attributes?.[attrName]?.value;
-            if (editState.userChange?.value !== undefined &&
-                JSON.stringify(editState.userChange.value) === JSON.stringify(serverValue)) {
+            const hadUserChange = editState.userChange?.value !== undefined;
+            if (hadUserChange && JSON.stringify(editState.userChange!.value) === JSON.stringify(serverValue)) {
                 editState.userChange = undefined;
                 editState.hasConflict = false;
+                // User change was cleared - need to update visual state
+                this.editStates.set(attrName, editState);
+                this._markDirty(attrName);
+                this._scheduleUpdate();
+            } else {
+                this.editStates.set(attrName, editState);
             }
-            this.editStates = new Map(this.editStates.set(attrName, editState));
         }
     }
 
@@ -431,7 +451,9 @@ export class OrEditAssetPanel extends LitElement {
         if (editState) {
             editState.userChange = undefined;
             editState.hasConflict = false;
+            editState.userChoseToKeep = false;
             this.editStates.set(attrName, editState);
+            this._markDirty(attrName);
             this._onModified();
         }
     }
@@ -443,7 +465,8 @@ export class OrEditAssetPanel extends LitElement {
             editState.hasConflict = false;
             editState.userChoseToKeep = true;
             this.editStates.set(attrName, editState);
-            this.requestUpdate();
+            this._markDirty(attrName);
+            this._scheduleUpdate();
         }
     }
 
@@ -511,8 +534,20 @@ export class OrEditAssetPanel extends LitElement {
         return String(value);
     }
 
-    shouldUpdate(changedProperties: PropertyValues): boolean {
-        return super.shouldUpdate(changedProperties);
+    /** Mark an attribute as needing template regeneration */
+    private _markDirty(attrName: string): void {
+        this._dirtyAttributes.add(attrName);
+        this._templateCache.delete(attrName);
+    }
+
+    /** Schedule a batched update */
+    private _scheduleUpdate(): void {
+        if (this._updatePending) return;
+        this._updatePending = true;
+        requestAnimationFrame(() => {
+            this._updatePending = false;
+            this.requestUpdate();
+        });
     }
 
     protected render() {
@@ -600,11 +635,28 @@ export class OrEditAssetPanel extends LitElement {
         const allAttrNames = [...existingAttrNames, ...addedAttrNames]
             .sort((a, b) => a.toUpperCase().localeCompare(b.toUpperCase()));
 
+        // Use cached templates where possible, regenerate only dirty ones
         this.attributeTemplatesAndValidators = allAttrNames.map(name => {
+            // Check if we have a valid cached template
+            if (this._templateCache.has(name) && !this._dirtyAttributes.has(name)) {
+                return this._templateCache.get(name)!;
+            }
+
+            // Generate new template
             const attribute = this.addedAttributes[name] || this.liveAsset.attributes![name];
             attribute.name = name;
-            return this._getAttributeTemplate(this.liveAsset.type!, attribute as Attribute<any>, name);
+            const templateAndValidator = this._getAttributeTemplate(this.liveAsset.type!, attribute as Attribute<any>, name);
+            this._templateCache.set(name, templateAndValidator);
+            this._dirtyAttributes.delete(name);
+            return templateAndValidator;
         });
+
+        // Clean up cache for removed attributes
+        for (const cachedName of this._templateCache.keys()) {
+            if (!allAttrNames.includes(cachedName)) {
+                this._templateCache.delete(cachedName);
+            }
+        }
 
         const attributes = html`
             <div id="attribute-table" class="mdc-data-table">
@@ -615,16 +667,22 @@ export class OrEditAssetPanel extends LitElement {
                         <col span="1" style="width: 35%;">
                         <col span="1" style="width: 15%;">
                     </colgroup>
-                    <thead>
-                        <tr class="mdc-data-table__header-row">
-                            <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="name"></or-translate></th>
-                            <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="type"></or-translate></th>
-                            <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="value"></or-translate></th>
-                            <th class="mdc-data-table__header-cell" role="columnheader" scope="col" style="padding-right:8px;"><or-mwc-input style="float:right;" .type="${InputType.BUTTON}" .label="${i18next.t("expandAll")}" @or-mwc-input-changed="${expandAllToggle}"></or-mwc-input></th>
-                        </tr>
-                    </thead>
+                    ${guard([this.liveAsset.id], () => html`
+                        <thead>
+                            <tr class="mdc-data-table__header-row">
+                                <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="name"></or-translate></th>
+                                <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="type"></or-translate></th>
+                                <th class="mdc-data-table__header-cell" role="columnheader" scope="col"><or-translate value="value"></or-translate></th>
+                                <th class="mdc-data-table__header-cell" role="columnheader" scope="col" style="padding-right:8px;"><or-mwc-input style="float:right;" .type="${InputType.BUTTON}" .label="${i18next.t("expandAll")}" @or-mwc-input-changed="${expandAllToggle}"></or-mwc-input></th>
+                            </tr>
+                        </thead>
+                    `)}
                     <tbody class="mdc-data-table__content">
-                        ${this.attributeTemplatesAndValidators.map((attrTemplateAndValidator) => attrTemplateAndValidator.template)}
+                        ${repeat(
+                            this.attributeTemplatesAndValidators,
+                            (item, index) => allAttrNames[index],
+                            (item) => item.template
+                        )}
                         <tr class="mdc-data-table__row">
                             <td colspan="4">
                                 <div class="item-add-attribute">
@@ -662,12 +720,14 @@ export class OrEditAssetPanel extends LitElement {
         const deleteAttribute = () => {
             if (this.addedAttributes[attrName]) {
                 delete this.addedAttributes[attrName];
+                this._templateCache.delete(attrName);
             } else {
                 let state = this.editStates.get(attrName);
                 if (!state) state = { hasConflict: false, userChoseToKeep: false, isEditing: false, showUpdateFlash: false };
                 if (!state.userChange) state.userChange = {};
                 state.userChange.deleted = true;
                 this.editStates.set(attrName, state);
+                this._templateCache.delete(attrName);
             }
             this._onModified();
         };
@@ -676,12 +736,25 @@ export class OrEditAssetPanel extends LitElement {
         const canDelete = !descriptor || descriptor.optional || isAdded;
         const attributeInputRef: Ref<OrAttributeInput> = createRef();
 
-        // Filter out deleted meta items (where userChange.meta[name] is explicitly set to undefined)
-        const deletedMeta = editState?.userChange?.meta;
-        const metaTemplatesAndValidators = !attribute.meta ? [] : Object.entries(attribute.meta)
-            .filter(([name]) => !(deletedMeta && name in deletedMeta && deletedMeta[name] === undefined))
-            .sort(Util.sortByString(([name, value]) => name!))
-            .map(([name, value]) => this._getMetaItemTemplate(attribute, Util.getMetaItemNameValueHolder(name, value)));
+        // Build meta items list: server meta + newly added meta (from editStates) - deleted meta
+        const userMeta = editState?.userChange?.meta || {};
+        const serverMeta = attribute.meta || {};
+
+        // Collect all meta item names (server + user-added)
+        const allMetaNames = new Set([
+            ...Object.keys(serverMeta),
+            ...Object.keys(userMeta).filter(name => userMeta[name] !== undefined) // exclude deleted
+        ]);
+
+        // Filter out deleted meta items
+        const activeMetaNames = [...allMetaNames].filter(name => !(name in userMeta && userMeta[name] === undefined));
+
+        const metaTemplatesAndValidators = activeMetaNames
+            .sort((a, b) => a.toUpperCase().localeCompare(b.toUpperCase()))
+            .map(name => {
+                const value = serverMeta[name] !== undefined ? serverMeta[name] : userMeta[name];
+                return this._getMetaItemTemplate(attribute, Util.getMetaItemNameValueHolder(name, value));
+            });
 
         const validator = (): ValidatorResult => {
             let valid = false;
@@ -793,6 +866,7 @@ export class OrEditAssetPanel extends LitElement {
         if (!editState.userChange) editState.userChange = {};
         editState.userChange.value = newValue;
         this.editStates.set(attrName, editState);
+        this._markDirty(attrName);
         this._onModified();
     }
 
@@ -811,7 +885,8 @@ export class OrEditAssetPanel extends LitElement {
         editState.userChange.meta[metaName] = newValue;
 
         // Don't directly mutate liveAsset - track in editStates only
-        this.editStates = new Map(this.editStates.set(attrName, editState));
+        this.editStates.set(attrName, editState);
+        this._markDirty(attrName);
         this._onModified();
     }
 
@@ -872,7 +947,8 @@ export class OrEditAssetPanel extends LitElement {
             if (!state.userChange) state.userChange = {};
             if (!state.userChange.meta) state.userChange.meta = {};
             state.userChange.meta[metaName] = undefined; // Mark as deleted
-            this.editStates = new Map(this.editStates.set(attrName, state));
+            this.editStates.set(attrName, state);
+            this._markDirty(attrName);
             this._onModified();
         };
 
@@ -998,16 +1074,23 @@ export class OrEditAssetPanel extends LitElement {
                         const list = dialog!.shadowRoot!.getElementById("meta-creator-list") as OrMwcList;
                         const selectedItems = list ? list.selectedItems : undefined;
                         if (selectedItems) {
-                            if (!attribute.meta) {
-                                attribute.meta = {};
+                            const attrName = attribute.name!;
+                            let state = this.editStates.get(attrName);
+                            if (!state) {
+                                state = { hasConflict: false, userChoseToKeep: false, isEditing: false, showUpdateFlash: false };
                             }
+                            if (!state.userChange) state.userChange = {};
+                            if (!state.userChange.meta) state.userChange.meta = {};
+
                             selectedItems.forEach((item) => {
                                 const descriptor = AssetModelUtil.getMetaItemDescriptors().find((descriptor) => descriptor.name === item.value);
                                 if (descriptor) {
-                                    attribute.meta![descriptor.name!] = (descriptor.type === 'boolean') ? true : null;
-                                    this._onModified();
+                                    state!.userChange!.meta![descriptor.name!] = (descriptor.type === 'boolean') ? true : null;
                                 }
                             });
+                            this.editStates.set(attrName, state);
+                            this._markDirty(attrName);
+                            this._onModified();
                         }
                     },
                     content: "add"

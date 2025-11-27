@@ -41,7 +41,7 @@ import {styleMap} from "lit/directives/style-map.js";
 import {classMap} from "lit/directives/class-map.js";
 import {GenericAxiosResponse} from "axios";
 import "./or-edit-asset-panel";
-import {OrEditAssetModifiedEvent, OrEditAssetPanel, ValidatorResult, AttributeEditState, UserAttributeChange, AssetLevelChanges, AddedAttributes} from "./or-edit-asset-panel";
+import {OrEditAssetModifiedEvent, OrEditAssetPanel, ValidatorResult} from "./or-edit-asset-panel";
 import "@openremote/or-mwc-components/or-mwc-snackbar";
 import {showSnackbar} from "@openremote/or-mwc-components/or-mwc-snackbar";
 import {progressCircular} from "@openremote/or-mwc-components/style";
@@ -1545,11 +1545,7 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
                     // Let editor handle the update (manages conflicts, flash, etc.)
                     const editor = this.shadowRoot!.getElementById("editor") as OrEditAssetPanel;
                     if (editor) {
-                        editor.attributeUpdated(
-                            attrName,
-                            attributeEvent.value,
-                            attributeEvent.timestamp!
-                        );
+                        editor.attributeUpdated(attrName, attributeEvent.value);
                     }
                 } else {
                     // View mode: re-render to show updated value
