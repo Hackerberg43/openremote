@@ -1456,14 +1456,14 @@ export class OrAssetViewer extends subscribe(manager)(translate(i18next)(LitElem
 
         if (saveResult.success) {
             try {
-                const assetInfo = await this.loadAssetInfo(saveResult.asset!);
-                this._assetInfo = assetInfo;
-                this.assetId = saveResult.asset?.id;
 
                 // Reset editor state after successful save
                 if (editor) {
                     editor.resetEditState();
                 }
+                const assetInfo = await this.loadAssetInfo(saveResult.asset!);
+                this._assetInfo = assetInfo;
+                this.assetId = saveResult.asset?.id;
             } catch (e) {
                 // We can ignore this as it should indicate that the asset has changed
             }
