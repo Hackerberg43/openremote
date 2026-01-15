@@ -23,9 +23,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.openremote.agent.protocol.io.AbstractNettyIOClient;
+import org.openremote.agent.protocol.modbus.util.ModbusTcpDecoder;
+import org.openremote.agent.protocol.modbus.util.ModbusTcpEncoder;
+import org.openremote.agent.protocol.modbus.util.ModbusTcpFrame;
 import org.openremote.agent.protocol.tcp.TCPIOClient;
 import org.openremote.model.syslog.SyslogCategory;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -39,17 +41,8 @@ public class ModbusTcpIOClient extends TCPIOClient<ModbusTcpFrame> {
 
     public ModbusTcpIOClient(String host, int port) {
         super(host, port);
-
-        // Set up Modbus TCP encoder and decoder
-        setEncoderDecoderProvider(
-            () -> new ChannelHandler[] {
-                new ModbusTcpEncoder(),
-                new ModbusTcpDecoder(),
-                new AbstractNettyIOClient.MessageToMessageDecoder<>(ModbusTcpFrame.class, this)
-            }
-        );
+        // Note: encoder/decoder provider is set by the protocol's getEncoderDecoderProvider()
     }
-
 
     public int getNextTransactionId() {
         return transactionIdCounter.updateAndGet(current -> (current + 1) % 65536);
@@ -75,39 +68,5 @@ public class ModbusTcpIOClient extends TCPIOClient<ModbusTcpFrame> {
         }
     }
 
-    public static class ModbusTcpDecoder extends io.netty.handler.codec.ByteToMessageDecoder {
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-            // Need at least 7 bytes for MBAP header
-            if (in.readableBytes() < 7) {
-                return;
-            }
 
-            in.markReaderIndex();
-
-            // Read MBAP header
-            int transactionId = in.readUnsignedShort();
-            int protocolId = in.readUnsignedShort();
-            int length = in.readUnsignedShort();
-            int unitId = in.readUnsignedByte();
-            int pduLength = length - 1; // Length includes unit ID
-
-            if (in.readableBytes() < pduLength) {
-                // Not enough data yet, reset and wait
-                in.resetReaderIndex();
-                return;
-            }
-
-            byte[] pdu = new byte[pduLength];
-            in.readBytes(pdu);
-
-            ModbusTcpFrame frame = new ModbusTcpFrame(transactionId, protocolId, length, unitId, pdu);
-
-            LOG.finest(() -> String.format("Decoded Modbus TCP frame: TxID=%d, UnitID=%d, FC=0x%02X, PDU length=%d, Exception=%b",
-                frame.getTransactionId(), frame.getUnitId(), frame.getFunctionCode(),
-                frame.getPdu().length, frame.isException()));
-
-            out.add(frame);
-        }
-    }
 }

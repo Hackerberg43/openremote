@@ -19,12 +19,16 @@
  */
 package org.openremote.test.protocol.modbus
 
+import net.bytebuddy.agent.ByteBuddyAgent
+import net.bytebuddy.agent.builder.AgentBuilder
+import net.bytebuddy.asm.Advice
+import net.bytebuddy.matcher.ElementMatchers
 import org.openremote.agent.protocol.modbus.ModbusAgent
 import org.openremote.agent.protocol.modbus.ModbusAgentLink
 import org.openremote.agent.protocol.modbus.ModbusSerialAgent
 import org.openremote.agent.protocol.modbus.ModbusSerialProtocol
-import org.openremote.agent.protocol.serial.JSerialCommChannelConfig.Paritybit
 import org.openremote.agent.protocol.serial.SerialIOClient
+import org.openremote.agent.protocol.serial.JSerialCommChannelConfig.Paritybit
 import org.openremote.manager.agent.AgentService
 import org.openremote.manager.asset.AssetProcessingService
 import org.openremote.manager.asset.AssetStorageService
@@ -55,7 +59,19 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
     static ByteArrayOutputStream frameBuffer = new ByteArrayOutputStream()
 
     def setupSpec() {
-        SerialIOClient.setTestChannelClass(MockSerialChannel.class)
+        // retransform SerialIOClient.getChannelClass() to return MockSerialChannel instead of JSerialCommChannel
+        def instrumentation = ByteBuddyAgent.install()
+        new AgentBuilder.Default()
+            .disableClassFormatChanges()
+            .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+            .type(ElementMatchers.is(SerialIOClient.class))
+            .transform { builder, typeDescription, classLoader, module, protectionDomain ->
+                builder.visit(Advice.to(MockSerialChannel.GetChannelClassAdvice.class)
+                    .on(ElementMatchers.named("getChannelClass")))
+            }
+            .installOn(instrumentation)
+
+        instrumentation.retransformClasses(SerialIOClient.class)
 
         // Set up mock serial channel to handle Modbus RTU frames
         MockSerialChannel.setDataHandler { byte[] data, MockSerialChannel.ResponseCallback responseCallback ->
@@ -86,7 +102,6 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
     }
 
     def cleanupSpec() {
-        SerialIOClient.setTestChannelClass(null)
         MockSerialChannel.setDataHandler(null)
     }
 
@@ -161,7 +176,7 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
             def protocol = agentService.getProtocolInstance(agent.id) as ModbusSerialProtocol
             assert protocol != null
             // No batch groups should be created for incomplete read config
-            assert protocol.batchGroups.isEmpty()
+            assert protocol.modbusExecutor.batchGroups.isEmpty()
         }
 
         when: "the partial config device is removed"
@@ -239,7 +254,7 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
             assert protocol != null
 
             // Check that batch groups were created
-            assert protocol.batchGroups.size() > 0
+            assert protocol.modbusExecutor.batchGroups.size() > 0
 
             device = assetStorageService.find(device.getId(), true)
 
@@ -341,7 +356,7 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
             def protocol = agentService.getProtocolInstance(agent.id) as ModbusSerialProtocol
             assert protocol != null
 
-            def cachedBatches = protocol.cachedBatches
+            def cachedBatches = protocol.modbusExecutor.cachedBatches
             // Should have created multiple batches due to illegal register gaps
             def allBatches = cachedBatches.values().flatten()
             assert allBatches.size() >= 2  // At least 2 batches due to illegal register splits
@@ -643,7 +658,7 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
         conditions.eventually {
             def protocol = agentService.getProtocolInstance(agent.id) as ModbusSerialProtocol
             assert protocol != null
-            assert protocol.batchGroups.size() > 0
+            assert protocol.modbusExecutor.batchGroups.size() > 0
         }
     }
 
@@ -773,7 +788,7 @@ class ModbusSerialTest extends Specification implements ManagerContainerTrait {
         conditions.eventually {
             def protocol = agentService.getProtocolInstance(agent.id) as ModbusSerialProtocol
             assert protocol != null
-            assert protocol.writeIntervalMap.size() == 1
+            assert protocol.modbusExecutor.writeIntervalMap.size() == 1
         }
 
         def assetDatapointService = container.getService(org.openremote.manager.datapoint.AssetDatapointService.class)

@@ -21,6 +21,9 @@ package org.openremote.agent.protocol.modbus;
 
 import io.netty.channel.ChannelHandler;
 import org.openremote.agent.protocol.io.AbstractNettyIOClient;
+import org.openremote.agent.protocol.modbus.util.ModbusRTUDecoder;
+import org.openremote.agent.protocol.modbus.util.ModbusRTUEncoder;
+import org.openremote.agent.protocol.modbus.util.ModbusSerialFrame;
 import org.openremote.agent.protocol.serial.JSerialCommChannelConfig.Paritybit;
 import org.openremote.agent.protocol.serial.SerialIOClient;
 
@@ -37,14 +40,7 @@ public class ModbusSerialIOClient extends SerialIOClient<ModbusSerialFrame> {
         this.dataBits = dataBits;
         this.stopBits = stopBits;
         this.parity = parity;
-
-        setEncoderDecoderProvider(
-            () -> new ChannelHandler[] {
-                new ModbusRTUEncoder(),
-                new ModbusRTUDecoder(),
-                new AbstractNettyIOClient.MessageToMessageDecoder<>(ModbusSerialFrame.class, this)
-            }
-        );
+        // Note: encoder/decoder provider is set by the protocol's getEncoderDecoderProvider()
     }
 
     @Override
