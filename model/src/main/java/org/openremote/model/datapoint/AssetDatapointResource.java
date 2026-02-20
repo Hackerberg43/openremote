@@ -69,7 +69,6 @@ public interface AssetDatapointResource {
     void getDatapointExport(@Suspended AsyncResponse asyncResponse,
                             @QueryParam("attributeRefs") String attributeRefsString,
                             @QueryParam("fromTimestamp") long fromTimestamp,
-                            @QueryParam("toTimestamp") long toTimestamp,
-                            @QueryParam("format") @DefaultValue("CSV") DatapointExportFormat format);
+                            @QueryParam("toTimestamp") long toTimestamp);
 
 }
