@@ -643,6 +643,15 @@
   "scheduleRuleActivity": "Schedule Rule Activity",
   "scheduleSimulatorActivity": "Simulator Replay Schedule",
   "defaultSimulatorSchedule": "Replay today at {{time}}",
+  "replayEditor": {
+    "time": "Time (hh:mm:ss)",
+    "value": "Value",
+    "clear": "Clear",
+    "yMin": "Y min",
+    "yMax": "Y max",
+    "emptyHint": "Click anywhere on the graph to add a datapoint. Drag to move, click ✕ in the table to delete.",
+    "unsupportedType": "Graphical editor only supports numeric or boolean values."
+  },
   "schedule": {
     "count_one": "occurrence",
     "count_other": "occurrences",
