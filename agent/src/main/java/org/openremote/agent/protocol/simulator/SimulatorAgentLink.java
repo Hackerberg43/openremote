@@ -38,6 +38,7 @@ public class SimulatorAgentLink extends AgentLink<SimulatorAgentLink> {
         " linked attribute) in a continuous loop based on a schedule (by default replays every 24h)." +
         " Predicted datapoints can be added by configuring 'Store predicted datapoints' which will insert the datapoints" +
         " immediately as determined by the schedule. Datapoints scheduled after the replay loop are ignored.")
+    @JsonSchemaFormat("simulator-replay")
     protected SimulatorReplayDatapoint[] replayData;
 
     @JsonSchemaTitle("Schedule")
