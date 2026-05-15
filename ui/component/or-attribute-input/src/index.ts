@@ -41,6 +41,7 @@ import "@openremote/or-json-forms";
 import {ErrorObject, OrJSONForms, StandardRenderers} from "@openremote/or-json-forms";
 import {agentIdRendererRegistryEntry} from "./renderers/agent-link";
 import {schedulerRendererRegistryEntry} from "./renderers/scheduler";
+import {replayRendererRegistryEntry} from "./renderers/replay";
 
 export class OrAttributeInputChangedEvent extends CustomEvent<OrAttributeInputChangedEventDetail> {
 
@@ -117,7 +118,7 @@ export function getHelperText(sending: boolean, error: boolean, timestamp: numbe
     return i18next.t("updatedWithDate", { date: new Date(timestamp) });
 }
 
-const jsonFormsAttributeRenderers = [...StandardRenderers, agentIdRendererRegistryEntry, schedulerRendererRegistryEntry];
+const jsonFormsAttributeRenderers = [...StandardRenderers, agentIdRendererRegistryEntry, schedulerRendererRegistryEntry, replayRendererRegistryEntry];
 
 const schemas = new Map<string, unknown>();
 const inflightRequests = new Map<string, Promise<unknown>>();
